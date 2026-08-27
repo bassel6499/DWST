@@ -2,6 +2,8 @@ import type { CrewExperience, PersonnelStatus } from './canonicalLedger';
 
 export interface PersonnelRecord {
   id:string;
+  /** Canonical organizational ownership. Omit for legacy aggregate-only records. */
+  unitId?:string;
   status:PersonnelStatus;
   qualifications:string[];
   experience:Partial<Record<CrewExperience,number>>;
@@ -15,6 +17,7 @@ export function validatePersonnelRegistry(registry:PersonnelRegistry,totalPerson
   for(const p of registry.personnel){
     if(!p.id) errors.push('Personnel record requires an ID');
     if(ids.has(p.id)) errors.push(`Duplicate personnel ID: ${p.id}`); ids.add(p.id);
+    if(p.unitId!==undefined&&!p.unitId) errors.push(`Personnel unitId cannot be empty: ${p.id}`);
     if(!['available','training','assigned','wounded','killed','missing'].includes(p.status)) errors.push(`Invalid personnel status: ${p.id}`);
     if(new Set(p.qualifications).size!==p.qualifications.length) errors.push(`Duplicate qualification on personnel: ${p.id}`);
   }
