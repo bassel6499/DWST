@@ -1,4 +1,5 @@
 import { strict as assert } from 'node:assert';
+import { describe, it } from 'vitest';
 import { crewRequirement, usableEquipment } from './crews';
 
 describe('legacy crew compatibility',()=>{
