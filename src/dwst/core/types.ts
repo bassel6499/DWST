@@ -1,3 +1,5 @@
+import type { WorldPosition } from './spatialPosition';
+
 export type EraId =
   | 'ancient' | 'medieval' | 'early-modern' | 'industrial' | 'ww1' | 'interwar' | 'ww2'
   | 'early-cold-war' | 'late-cold-war' | 'post-cold-war' | 'contemporary' | 'future';
@@ -11,10 +13,10 @@ export interface UnitState {
   personnel:number; equipment:number; ammunition:number; fuel:number;
   readiness:number; training:number; experience:number; morale:number; cohesion:number;
   fatigue:number; wear:number; logistics:number; commandQuality:number; intelligence:number;
-  combatPower:number; status:UnitStatus; position:{lon:number;lat:number}; order?:Order;
+  combatPower:number; status:UnitStatus; position:WorldPosition; order?:Order;
   cumulativeLosses:number; history:UnitEvent[];
 }
-export interface Order { type:'move'|'attack'|'defend'|'screen'|'reserve'|'withdraw'|'recon'; objective?:string; destination?:{lon:number;lat:number}; priority?:'low'|'normal'|'high'; posture?:'cautious'|'normal'|'aggressive'; text?:string; }
+export interface Order { type:'move'|'attack'|'defend'|'screen'|'reserve'|'withdraw'|'recon'; objective?:string; destination?:WorldPosition; priority?:'low'|'normal'|'high'; posture?:'cautious'|'normal'|'aggressive'; text?:string; }
 export interface ScenarioState { id:string; name:string; era:EraId; scale:Scale; turnHours:number; elapsedHours:number; weather:number; terrain:number; intelLevel:number; units:Record<string,UnitState>; events:SimulationEvent[]; }
 export interface UnitEvent { turn:number; type:string; summary:string; personnelLosses?:number; equipmentLosses?:number; }
 export interface SimulationEvent { turn:number; phase:'movement'|'combat'|'sustainment'|'command'; message:string; unitIds:string[]; }
