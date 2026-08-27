@@ -29,6 +29,8 @@
 - The legacy `src/dwst/core/detection.ts` compatibility detector has been reduced to the canonical `detectContacts(ScenarioState, ...)` implementation using `WorldPosition`; the deleted battlefield-based detector is not restored.
 - Legacy `src/dwst/core/simulationState.ts` has been removed after direct inspection/search established it was part of the retired operational battlefield model and had no required current consumers.
 - Default generic engine coefficients are now centralized in `eraRules.ts`; the duplicate local defaults in `engine.ts` were removed.
+- P2-S17 canonical geographic movement operations were added and CI validated.
+- P2-S7 executable core spatial invariants were added and CI validated.
 
 ### Confirmed remaining architecture problems
 
@@ -36,19 +38,19 @@
 
 `resolveUnifiedTurn()` operated on `SimulationState`/legacy battlefield state and mutated it directly, while canonical `resolveTurn()` operates on `ScenarioState` and is documented as pure.
 
-**Status:** Obsolete implementation removed. CI validation of the completed dependency cleanup subsequently passed on the latest green runs.
+**Status:** Resolved and CI-validated.
 
 #### P2-S2 — Duplicate spatial representations
 
 Legacy `BattlefieldState` stored `Position { x, y }` while canonical `UnitState` stores geographic `WorldPosition { lon, lat }`.
 
-**Status:** Resolved. Standalone battlefield implementation, legacy `SimulationState`, and retired x/y Ardennes scenario state have been removed/migrated. The latest cleanup sequence subsequently reached green CI.
+**Status:** Resolved and CI-validated. Standalone battlefield implementation, legacy `SimulationState`, and retired x/y Ardennes scenario state have been removed/migrated.
 
 #### P2-S3 — Duplicate detection implementations
 
 `detection.ts` previously contained canonical `detectContacts(ScenarioState, ...)` and a compatibility `detect(BattlefieldState, ...)` using local `x/y` coordinates.
 
-**Status:** Resolved. `detection.ts` exposes only canonical `detectContacts()` over `ScenarioState`/`WorldPosition`; latest cleanup CI is green.
+**Status:** Resolved and CI-validated. `detection.ts` exposes only canonical `detectContacts()` over `ScenarioState`/`WorldPosition`.
 
 #### P2-S4 — No verified DWST conversion from legacy `x/y` to geographic position
 
@@ -66,19 +68,21 @@ Verified ORBAT Mapper evidence shows a `MapAdapter` contract with `toLonLat()` /
 
 `SimulationState` previously contained `BattlefieldState`, and the legacy resolver used it for movement and detection.
 
-**Status:** Resolved. `core/battlefield.ts`, `core/simulationState.ts`, and the obsolete unified resolver have been removed; the final cleanup sequence subsequently reached green CI.
+**Status:** Resolved and CI-validated. `core/battlefield.ts`, `core/simulationState.ts`, and the obsolete unified resolver have been removed.
 
 #### P2-S7 — Map/simulation spatial consistency invariant needs executable protection
 
-The architecture requires one authoritative geographic position. A future invariant test should prove that any displayed/derived map position is derived from the same canonical `WorldPosition` and cannot silently diverge into a second physical location.
+The architecture requires one authoritative geographic position. Executable invariant tests now validate canonical unit position validity, scenario/unit identity consistency, and order destinations as separate future intent rather than a second current location.
 
-**Status:** Confirmed requirement. Host map boundary evidence now identifies the separation to protect; executable tests remain pending after P2-S17 movement semantics are corrected.
+**Status:** Resolved and CI-validated.
 
 #### P2-S8 — WW2 orchestration resides in `core`
 
-Direct inspection confirmed `src/dwst/core/ww2.ts` contained WW2-specific combat and turn orchestration (`resolveWW2Combat`, `runWW2Turn`).
+Direct inspection confirmed `src/dwst/core/ww2.ts` is now a thin compatibility facade only: it re-exports selectable WW2 combat and wraps generic `simulateTurn(state)` as deprecated `runWW2Turn()`.
 
-**Status:** Active demo caller migrated to generic `simulateTurn()`. `core/ww2.ts` remains a deprecated compatibility shim until remaining callers are proven and migrated.
+Direct search currently returns zero indexed consumers for `runWW2Turn`, `resolveWW2Combat`, and `core/ww2` import patterns. Search index is discovery evidence only, not final deletion proof.
+
+**Status:** 🟡 Compatibility facade isolated; direct file/import evidence audit continues. Do not delete until the facade's live consumers and public contract are checked against actual source and CI.
 
 #### P2-S9 — Canonical combat already owns canonical detection indirectly
 
@@ -108,7 +112,7 @@ The same WW2 square-law combat implementation was represented both in `core/ww2S
 
 `SimulationState` imported and stored `BattlefieldState`.
 
-**Status:** Resolved. `src/dwst/core/simulationState.ts` deleted; cleanup sequence subsequently green.
+**Status:** Resolved and CI-validated. `src/dwst/core/simulationState.ts` deleted.
 
 #### P2-S15 — WW2 Ardennes scenario embedded the deleted x/y battlefield model
 
@@ -120,27 +124,26 @@ The scenario embedded an x/y battlefield and retired operational state. No verif
 
 `SupplyRoute` was imported from `./battlefield` even though supply resolution did not require battlefield state.
 
-**Status:** Resolved. Logistics now owns a minimal local `SupplyRoute` contract; cleanup sequence subsequently green.
+**Status:** Resolved and CI-validated. Logistics now owns a minimal local `SupplyRoute` contract.
 
 #### P2-S17 — Generic engine treats geographic longitude/latitude as Cartesian coordinates
 
-Direct inspection of `src/dwst/core/engine.ts` shows movement currently computes `dx = destination.lon - position.lon`, `dy = destination.lat - position.lat`, uses `Math.hypot(dx, dy)`, and linearly interpolates longitude and latitude. This conflicts with `WorldPosition`'s documented geographic semantics and the rule that local computational coordinates require an explicit spatial reference.
+The generic engine previously computed movement with direct lon/lat `dx`, `dy`, `Math.hypot`, and linear interpolation.
 
-Existing repository evidence also shows the host application already has mature geographic/geodesic tooling and ORBAT Mapper owns UI/map coordinate conversion. Therefore the DWST core must not import `MapAdapter` or create a competing projection.
+**Resolution:** `geographicDistanceMeters()` and `interpolateGeographicPosition()` now provide deterministic geographic/great-circle operations over canonical `WorldPosition`; engine movement uses those operations.
 
-**Status:** Confirmed. Master-plan entry recorded before implementation. Required fix: introduce a small deterministic core geographic movement operation that accepts canonical `WorldPosition` inputs and returns a canonical `WorldPosition` output, using geographic/geodesic semantics. Do not restore `BattlefieldState`, introduce UI coordinates, or invent a scenario-local projection.
+Focused tests cover boundary fractions, clamping, intermediate geographic validity, antimeridian behavior, zero distance, and geographic distance sanity.
+
+**Status:** Resolved and CI-validated.
 
 ### Next investigation / implementation order
 
-1. **Implement P2-S17:** add a small deterministic geographic movement operation over canonical `WorldPosition` and replace direct lon/lat Cartesian interpolation in the generic engine.
-2. Add focused tests for that movement operation, including start/end, zero progress, full progress, dateline-safe behavior where applicable, and position validity.
-3. Run CI; do not continue if the canonical spatial correction regresses behavior.
-4. Add executable spatial-consistency invariants around canonical `WorldPosition` and the map-facing projection boundary.
-5. Prove all callers/entry points of the remaining WW2 compatibility shim using direct repository evidence.
-6. Preserve/expand tests around observed WW2 movement, combat, sustainment, time, and detection behavior before removing the shim.
-7. Determine whether the generic engine needs a ruleset-owned detection policy/interface so detection behavior remains era-configurable.
-8. Identify and formalize the smallest ORBAT Mapper import/export boundary for scenario/unit geographic data; reuse existing GeoJSON/map contracts rather than adding a projection.
-9. Run a final whole-project audit for duplicate state authority, coordinate systems, era leakage, mutation boundaries, and hidden legacy consumers.
+1. Prove all callers/entry points of the remaining WW2 compatibility facade using direct repository evidence beyond search-index results.
+2. Preserve/expand tests around observed WW2 movement, combat, sustainment, time, and detection behavior before deleting the facade.
+3. Delete the WW2 compatibility facade only after its actual consumers are migrated/proven absent and CI validates the result.
+4. Determine whether the generic engine needs a ruleset-owned detection policy/interface so detection behavior remains era-configurable.
+5. Identify and formalize the smallest ORBAT Mapper import/export boundary for scenario/unit geographic data; reuse existing GeoJSON/map contracts rather than adding a projection.
+6. Run a final whole-project audit for duplicate state authority, coordinate systems, era leakage, mutation boundaries, and hidden legacy consumers.
 
 ## Findings log
 
@@ -157,5 +160,7 @@ Existing repository evidence also shows the host application already has mature 
 - 2026-08-27: Direct inspection confirmed `CanonicalState` is resource/personnel/equipment authority only while `UnitState.position: WorldPosition` is canonical physical position.
 - 2026-08-27: Direct inspection confirmed `simulationState.ts` and a compatibility detector still depended on deleted `BattlefieldState`; both obsolete paths were removed.
 - 2026-08-27: CI failures exposed the remaining dependency tail after battlefield removal: resolver, logistics, scenario registry, and Ardennes scenario; all were migrated/removed without restoring battlefield state, and the final two runs of the cleanup sequence were green.
-- 2026-08-27: Direct inspection confirmed the generic engine directly interpolates geographic longitude/latitude as Cartesian values; recorded as P2-S17 before correction.
-- 2026-08-27: Direct inspection confirmed the host map/import-export architecture already provides GeoJSON geographic handling and ORBAT Mapper owns map conversion, so the engine correction must remain a small core geographic operation rather than a second map/projection system.
+- 2026-08-27: Direct inspection confirmed the generic engine directly interpolated geographic longitude/latitude as Cartesian values; corrected through deterministic great-circle movement operations and focused tests; CI validated.
+- 2026-08-27: Direct inspection confirmed the host map/import-export architecture already provides GeoJSON geographic handling and ORBAT Mapper owns map conversion, so the engine correction remains a small core geographic operation rather than a second map/projection system.
+- 2026-08-27: Executable core spatial invariants were added and CI validated, protecting one authoritative current physical position.
+- 2026-08-27: Direct inspection confirmed `core/ww2.ts` is now only a compatibility facade; search index currently reports zero consumers for its exported compatibility names, but direct source-level consumer proof is still required before deletion.
