@@ -26,32 +26,34 @@
 - The duplicate WW2 square-law implementation was consolidated into the selectable WW2 scenario layer; the old `core/ww2SquareLaw.ts` implementation was removed and CI runs `33107940693` and `33107899018` passed type-check and unit tests.
 - Standalone `src/dwst/core/battlefield.ts` was removed after direct evidence showed zero current repository-search consumers for its public `BattlefieldState`, `moveUnit`, and `terrainAt` contract.
 - Direct inspection confirms canonical spatial state is already represented at the correct level: `UnitState.position: WorldPosition`. Spatial state therefore does **not** belong in `CanonicalState`, which remains resource/personnel/equipment authority.
+- The legacy `src/dwst/core/detection.ts` compatibility detector has been reduced to the canonical `detectContacts(ScenarioState, ...)` implementation using `WorldPosition`; the deleted battlefield-based detector is not restored.
+- Legacy `src/dwst/core/simulationState.ts` has been removed after direct inspection/search established it was part of the retired operational battlefield model and had no required current consumers.
 
 ### Confirmed remaining architecture problems
 
 #### P2-S1 — Two operational turn-resolution models
 
-`resolveUnifiedTurn()` operates on `SimulationState`/legacy battlefield state and mutates it directly, while canonical `resolveTurn()` operates on `ScenarioState` and is documented as pure. These are materially different execution models.
+`resolveUnifiedTurn()` operated on `SimulationState`/legacy battlefield state and mutated it directly, while canonical `resolveTurn()` operates on `ScenarioState` and is documented as pure. These are materially different execution models.
 
-**Status:** Confirmed. Migration required, but callers must be established before changing/removing the legacy contract.
+**Status:** Implementation removed for the obsolete resolver; awaiting CI validation of the dependency cleanup. Canonical `resolveTurn()` remains the active generic resolver.
 
 #### P2-S2 — Duplicate spatial representations
 
-Legacy `BattlefieldState` stores `Position { x, y }` and movement/detection operate on those coordinates. Canonical `UnitState` stores geographic `WorldPosition { lon, lat }`.
+Legacy `BattlefieldState` stored `Position { x, y }` while canonical `UnitState` stores geographic `WorldPosition { lon, lat }`.
 
-**Status:** Partially resolved. The standalone legacy battlefield implementation in `core/battlefield.ts` had zero current repository-search consumers and has been removed. Remaining P2-S2 work concerns any hidden/renamed spatial representation and any legacy state still embedded elsewhere; these must be checked through direct source inspection.
+**Status:** Standalone battlefield implementation removed. Legacy `SimulationState`/battlefield dependency is also removed. Ardennes scenario has been migrated off the x/y battlefield model. Final whole-project verification remains pending CI and direct consumer audit.
 
 #### P2-S3 — Duplicate detection implementations
 
-`detection.ts` contains canonical `detectContacts(ScenarioState, ...)` using `WorldPosition` and a compatibility `detect(BattlefieldState, ...)` using local `x/y` coordinates.
+`detection.ts` previously contained canonical `detectContacts(ScenarioState, ...)` and a compatibility `detect(BattlefieldState, ...)` using local `x/y` coordinates.
 
-**Status:** Implementation removed; awaiting CI validation. The compatibility detector was directly inspected and found to be the remaining consumer-side legacy path. No current repository-search consumers for `detect()` were found.
+**Status:** Resolved in source. `detection.ts` now exposes only canonical `detectContacts()` over `ScenarioState`/`WorldPosition`. CI validation pending.
 
 #### P2-S4 — No verified DWST conversion from legacy `x/y` to geographic position
 
 The audit has not established a valid semantic mapping between legacy battlefield `x/y` and canonical `WorldPosition`. Therefore no implicit conversion may be invented.
 
-**Status:** Confirmed constraint.
+**Status:** Confirmed constraint. The Ardennes migration deliberately does not fabricate a coordinate conversion.
 
 #### P2-S5 — ORBAT Mapper owns map-coordinate conversion
 
@@ -61,9 +63,9 @@ Verified mature ORBAT Mapper evidence shows a `MapAdapter` contract with `toLonL
 
 #### P2-S6 — Legacy battlefield state remains live
 
-`SimulationState` still contains `BattlefieldState`, and the legacy resolver uses it for movement and detection. Previous removal attempts caused concrete CI failures from remaining consumers.
+`SimulationState` previously contained `BattlefieldState`, and the legacy resolver used it for movement and detection. Removal exposed remaining consumers in logistics, resolver, scenario registry, and Ardennes scenario.
 
-**Status:** Partially resolved. Standalone `core/battlefield.ts` has been removed. `simulationState.ts` was subsequently identified as dead legacy operational state and removed; remaining legacy references must be verified directly.
+**Status:** Cleanup implemented. `core/battlefield.ts`, `core/simulationState.ts`, and the obsolete unified resolver have been removed; remaining dependency validation is a CI gate.
 
 #### P2-S7 — Map/simulation spatial consistency invariant needs executable protection
 
@@ -103,28 +105,37 @@ Direct inspection of `src/dwst/core/canonicalState.ts` confirms `CanonicalState`
 
 #### P2-S14 — Legacy `SimulationState` retains deleted battlefield dependency
 
-Direct inspection of `src/dwst/core/simulationState.ts` found that it imports `BattlefieldState`, stores it as `SimulationState.battlefield`, requires it in `createSimulationState()`, and mutates its turn counter in `advanceClock()`. The standalone `core/battlefield.ts` implementation has already been removed, so this module is now part of the retired legacy operational state model.
+Direct inspection of `src/dwst/core/simulationState.ts` found that it imported `BattlefieldState`, stored it as `SimulationState.battlefield`, required it in `createSimulationState()`, and mutated its turn counter in `advanceClock()`. Direct repository searches found no current consumers for `simulationState`, `SimulationState`, or `createSimulationState` on `audit/canonical-state-refactor`.
 
-Direct repository searches found no current consumers for `simulationState`, `SimulationState`, or `createSimulationState` on `audit/canonical-state-refactor`.
+**Status:** Resolved in source. `src/dwst/core/simulationState.ts` has been deleted. CI validation pending.
 
-**Status:** Implementation removed; awaiting CI validation. Canonical runtime state remains `ScenarioState`, with `UnitState.position: WorldPosition`.
+#### P2-S15 — WW2 Ardennes scenario still embedded the deleted x/y battlefield model
+
+Direct inspection of `src/dwst/scenarios/ardenne1944.ts` showed the scenario still imported `SimulationState` and `BattlefieldState`, embedded an x/y battlefield with historical features, and constructed the retired operational state. The audit could not establish a verified semantic conversion from those x/y values to geographic `WorldPosition`.
+
+**Status:** Resolved without fabrication. The scenario now constructs canonical `ScenarioState`, retains its WW2 identity, six-hour operational turn scale, weather/terrain/intelligence inputs, and historical objectives, but does not invent geographic coordinates for the old x/y features. Real unit/map geography must enter through authoritative scenario/ORBAT inputs.
+
+#### P2-S16 — Logistics retained a hidden dependency on the deleted battlefield module
+
+Direct inspection of `src/dwst/core/logistics.ts` showed `SupplyRoute` was imported from `./battlefield`, meaning deletion of the standalone battlefield implementation broke an otherwise independent logistics calculation.
+
+**Status:** Resolved in source. `SupplyRoute` is now a local logistics contract containing only the fields required by `resolveSupply()` (`id`, `capacity`, `interdiction`). No battlefield state or coordinates are reintroduced. CI validation pending.
 
 ### Next investigation / implementation order
 
-1. Validate the P2-S3/P2-S14 cleanup with CI.
-2. Prove all callers/entry points of `resolveUnifiedTurn()` using direct repository evidence; do not trust false-negative code-search results.
-3. Prove all callers of any remaining legacy detection or movement implementations.
+1. Validate the P2-S3/P2-S14/P2-S15/P2-S16 cleanup with CI.
+2. Prove all callers/entry points of the removed `resolveUnifiedTurn()` using direct repository evidence; do not trust false-negative code-search results.
+3. Prove all callers of any remaining legacy movement implementations.
 4. Preserve/expand tests around observed WW2 movement, combat, sustainment, time, and detection behavior before removing the WW2 compatibility shim.
 5. Determine whether the generic engine needs a ruleset-owned detection policy/interface so detection behavior remains era-configurable rather than WW2-specific.
 6. Identify the exact ORBAT Mapper integration boundary used by the application for geographic/map conversion.
 7. If a verified bridge exists, reuse it. If not, define the smallest explicit interface needed; do not implement an independent projection.
-8. Migrate detection consumers to canonical `WorldPosition`.
-9. Migrate movement consumers to canonical `WorldPosition`, preserving observed movement behavior through explicit rules/terrain inputs.
-10. Migrate terrain/logistics dependencies that currently require legacy battlefield state.
-11. Remove remaining legacy movement implementations only after zero required consumers are proven.
-12. Remove `BattlefieldState` from operational state only after migration tests and CI establish that canonical state is sufficient.
-13. Remove `core/ww2.ts` only after its active/required callers are migrated and WW2 behavior is covered by the selectable WW2 ruleset.
-14. Run a final whole-project audit for duplicate state authority, coordinate systems, era leakage, mutation boundaries, and hidden legacy consumers.
+8. Migrate any remaining movement consumers to canonical `WorldPosition`, preserving observed movement behavior through explicit rules/terrain inputs.
+9. Migrate any remaining terrain/logistics dependencies that require legacy battlefield state.
+10. Remove remaining legacy movement implementations only after zero required consumers are proven.
+11. Remove `core/ww2.ts` only after its active/required callers are migrated and WW2 behavior is covered by the selectable WW2 ruleset.
+12. Add executable spatial-consistency invariants around canonical `WorldPosition` and the map-facing projection boundary.
+13. Run a final whole-project audit for duplicate state authority, coordinate systems, era leakage, mutation boundaries, and hidden legacy consumers.
 
 ## Findings log
 
@@ -141,3 +152,8 @@ Direct repository searches found no current consumers for `simulationState`, `Si
 - 2026-08-27: Direct inspection confirmed `CanonicalState` is intentionally resource/personnel/equipment authority only, while `UnitState.position: WorldPosition` is the canonical physical-position field. Do not merge spatial state into the resource state.
 - 2026-08-27: Direct inspection confirmed `simulationState.ts` still depended on the deleted `BattlefieldState`; direct searches found no current consumers, so it was removed as dead legacy operational state.
 - 2026-08-27: Direct inspection confirmed `detection.ts` still contained a legacy `detect(BattlefieldState, ...)` compatibility implementation after the battlefield module was removed; direct searches found no current consumers, so the compatibility path was removed without altering canonical `detectContacts()`.
+- 2026-08-27: CI failures exposed the remaining dependency tail after battlefield removal: `resolveTurn.ts`, `logistics.ts`, `scenarios/registry.ts`, and `scenarios/ardenne1944.ts` still imported deleted legacy state/modules.
+- 2026-08-27: Removed obsolete `resolveTurn.ts` unified resolver rather than restoring `BattlefieldState`.
+- 2026-08-27: Decoupled logistics from battlefield state by defining the minimal local `SupplyRoute` contract required for supply resolution.
+- 2026-08-27: Migrated the Ardennes 1944 scenario to canonical `ScenarioState` without fabricating geographic coordinates for the legacy x/y features.
+- 2026-08-27: Migrated scenario registry typing from retired `SimulationState` to canonical `ScenarioState`.
