@@ -12,8 +12,6 @@ export interface UnitState {
   readiness:number; training:number; experience:number; morale:number; cohesion:number;
   fatigue:number; wear:number; logistics:number; commandQuality:number; intelligence:number;
   combatPower:number; status:UnitStatus; position:{lon:number;lat:number}; order?:Order;
-  /** Starting personnel used for relative strength-state assessment. */
-  initialPersonnel:number;
   cumulativeLosses:number; history:UnitEvent[];
 }
 export interface Order { type:'move'|'attack'|'defend'|'screen'|'reserve'|'withdraw'|'recon'; objective?:string; destination?:{lon:number;lat:number}; priority?:'low'|'normal'|'high'; posture?:'cautious'|'normal'|'aggressive'; text?:string; }
