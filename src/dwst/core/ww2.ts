@@ -15,5 +15,5 @@ import { simulateTurn } from './simulationStep';
  * the era ruleset from state.era and must remain the sole turn orchestrator.
  */
 export function runWW2Turn(state: ScenarioState): SimulationReport {
-  return simulateTurn(state);
+  return simulateTurn(state).report;
 }
