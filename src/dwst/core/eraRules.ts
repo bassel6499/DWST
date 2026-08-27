@@ -12,6 +12,14 @@ export interface EngineCoefficients {
   turnFatigue:number;
   logisticsDrain:number;
   readinessDrain:number;
+  readinessLogisticsWeight:number;
+  readinessFatiguePenalty:number;
+  readinessWearPenalty:number;
+  trainingEffect:number;
+  experienceEffect:number;
+  cohesionEffect:number;
+  moraleEffect:number;
+  commandEffect:number;
 }
 
 export interface EraRuleset {
@@ -38,6 +46,14 @@ const DEFAULT_ENGINE:EngineCoefficients={
   turnFatigue:0.01,
   logisticsDrain:0.015,
   readinessDrain:0.005,
+  readinessLogisticsWeight:0.4,
+  readinessFatiguePenalty:0.35,
+  readinessWearPenalty:0.25,
+  trainingEffect:0.25,
+  experienceEffect:0.25,
+  cohesionEffect:0.25,
+  moraleEffect:0.25,
+  commandEffect:0.2,
 };
 
 const base=(id:EraId,label:string,combatLaw:CombatLaw,turn:number):EraRuleset=>({id,label,combatLaw,rangedFire:true,spatialModel:'pde-hybrid',defaultTurnHours:turn,equipmentCrewCoupling:true,permanentAttrition:true,logisticsEnabled:true,engine:{...DEFAULT_ENGINE},notes:[]});
