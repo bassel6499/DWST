@@ -1,5 +1,6 @@
 import type { ScenarioState, SimulationReport, UnitState } from './types';
 import { resolveMovement } from './movement';
+import { resolveWW2Engagements } from './combat';
 
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value));
 
@@ -19,14 +20,7 @@ export function resolveWW2Combat(input: WW2CombatInput): WW2CombatResult {
   const defensePower = defenderFire * terrainDefense * (0.75 + 0.25 * weather) * (1 - 0.5 * surprise);
   const attackerRate = 0.012 * (defensePower / Math.max(attackerFire, 1));
   const defenderRate = 0.012 * (attackPower / Math.max(defenderFire, 1));
-  return {
-    attackerLosses: Math.min(attacker.personnel, Math.round(attacker.personnel * clamp(attackerRate))),
-    defenderLosses: Math.min(defender.personnel, Math.round(defender.personnel * clamp(defenderRate))),
-    attackerEquipmentLosses: Math.min(attacker.equipment, Math.round(attacker.equipment * clamp(attackerRate * 0.35))),
-    defenderEquipmentLosses: Math.min(defender.equipment, Math.round(defender.equipment * clamp(defenderRate * 0.35))),
-    attackerEffectiveness: clamp(attackPower / Math.max(defensePower, 1)),
-    defenderEffectiveness: clamp(defensePower / Math.max(attackPower, 1)),
-  };
+  return { attackerLosses: Math.min(attacker.personnel, Math.round(attacker.personnel * clamp(attackerRate))), defenderLosses: Math.min(defender.personnel, Math.round(defender.personnel * clamp(defenderRate))), attackerEquipmentLosses: Math.min(attacker.equipment, Math.round(attacker.equipment * clamp(attackerRate * 0.35))), defenderEquipmentLosses: Math.min(defender.equipment, Math.round(defender.equipment * clamp(defenderRate * 0.35))), attackerEffectiveness: clamp(attackPower / Math.max(defensePower, 1)), defenderEffectiveness: clamp(defensePower / Math.max(attackPower, 1)) };
 }
 
 export function runWW2Turn(state: ScenarioState): SimulationReport {
@@ -35,13 +29,15 @@ export function runWW2Turn(state: ScenarioState): SimulationReport {
   const workingState: ScenarioState = { ...state, units: Object.fromEntries(units.map(u => [u.id, u])) };
   resolveMovement(workingState);
   const events: SimulationReport['events'] = [];
+  const engagements = resolveWW2Engagements(workingState);
   for (const unit of units) {
     const hasOrder = Boolean(unit.order);
     unit.fatigue = clamp(unit.fatigue + (hasOrder ? 0.015 : 0.005) * state.turnHours / 6);
     unit.wear = clamp(unit.wear + 0.003 * state.turnHours);
     unit.logistics = clamp(unit.logistics - 0.01 * state.turnHours / 6);
-    unit.history.push({ turn, type: 'turn', summary: `Turn ${turn}: movement and sustainment resolved.` });
+    unit.history.push({ turn, type: 'turn', summary: `Turn ${turn}: movement, combat and sustainment resolved.` });
   }
+  for (const engagement of engagements) events.push({ turn, phase: 'combat', message: engagement.result, unitIds: [engagement.attackerId, engagement.defenderId] });
   events.push({ turn, phase: 'movement', message: `Turn ${turn}: movement orders resolved and positions updated.`, unitIds: units.map(u => u.id) });
   events.push({ turn, phase: 'sustainment', message: `Turn ${turn}: fatigue, wear, and logistics updated.`, unitIds: units.map(u => u.id) });
   return { turn, elapsedHours: state.elapsedHours + state.turnHours, events, units };
