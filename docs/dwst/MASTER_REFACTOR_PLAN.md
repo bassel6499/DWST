@@ -31,6 +31,7 @@
 - Default generic engine coefficients are now centralized in `eraRules.ts`; the duplicate local defaults in `engine.ts` were removed.
 - P2-S17 canonical geographic movement operations were added and CI validated.
 - P2-S7 executable core spatial invariants were added and CI validated.
+- The obsolete `src/dwst/core/ww2.ts` compatibility facade was removed after direct commit/diff inspection established that it contained only forwarding exports and the deprecated `runWW2Turn()` wrapper; its WW2 combat functionality was already owned by the selectable WW2 scenario layer and turn orchestration by the generic simulation pipeline. CI run `33117957851` passed type-check and unit tests after the subsequent WW2 fixture correction.
 
 ### Confirmed remaining architecture problems
 
@@ -78,11 +79,11 @@ The architecture requires one authoritative geographic position. Executable inva
 
 #### P2-S8 — WW2 orchestration resides in `core`
 
-Direct inspection confirmed `src/dwst/core/ww2.ts` is now a thin compatibility facade only: it re-exports selectable WW2 combat and wraps generic `simulateTurn(state)` as deprecated `runWW2Turn()`.
+Direct inspection of the deletion commit confirmed `src/dwst/core/ww2.ts` was only a compatibility facade. It re-exported selectable WW2 combat and wrapped generic `simulateTurn(state)` as deprecated `runWW2Turn()`.
 
-Direct search currently returns zero indexed consumers for `runWW2Turn`, `resolveWW2Combat`, and `core/ww2` import patterns. Search index is discovery evidence only, not final deletion proof.
+The facade was removed in commit `3efec7b3e363ab12468a31d81c697ef153792b33`. The replacement architecture is already in the selectable WW2 scenario layer plus the era-neutral generic simulation pipeline. The subsequent WW2 fixture correction was validated by green CI run `33117957851`.
 
-**Status:** 🟡 Compatibility facade isolated; direct file/import evidence audit continues. Do not delete until the facade's live consumers and public contract are checked against actual source and CI.
+**Status:** Resolved and CI-validated. The compatibility facade is deleted; no replacement facade is required.
 
 #### P2-S9 — Canonical combat already owns canonical detection indirectly
 
@@ -138,12 +139,9 @@ Focused tests cover boundary fractions, clamping, intermediate geographic validi
 
 ### Next investigation / implementation order
 
-1. Prove all callers/entry points of the remaining WW2 compatibility facade using direct repository evidence beyond search-index results.
-2. Preserve/expand tests around observed WW2 movement, combat, sustainment, time, and detection behavior before deleting the facade.
-3. Delete the WW2 compatibility facade only after its actual consumers are migrated/proven absent and CI validates the result.
-4. Determine whether the generic engine needs a ruleset-owned detection policy/interface so detection behavior remains era-configurable.
-5. Identify and formalize the smallest ORBAT Mapper import/export boundary for scenario/unit geographic data; reuse existing GeoJSON/map contracts rather than adding a projection.
-6. Run a final whole-project audit for duplicate state authority, coordinate systems, era leakage, mutation boundaries, and hidden legacy consumers.
+1. Determine whether the generic engine needs a ruleset-owned detection policy/interface so detection behavior remains era-configurable.
+2. Identify and formalize the smallest ORBAT Mapper import/export boundary for scenario/unit geographic data; reuse existing GeoJSON/map contracts rather than adding a projection.
+3. Run a final whole-project audit for duplicate state authority, coordinate systems, era leakage, mutation boundaries, and hidden legacy consumers.
 
 ## Findings log
 
@@ -163,4 +161,4 @@ Focused tests cover boundary fractions, clamping, intermediate geographic validi
 - 2026-08-27: Direct inspection confirmed the generic engine directly interpolated geographic longitude/latitude as Cartesian values; corrected through deterministic great-circle movement operations and focused tests; CI validated.
 - 2026-08-27: Direct inspection confirmed the host map/import-export architecture already provides GeoJSON geographic handling and ORBAT Mapper owns map conversion, so the engine correction remains a small core geographic operation rather than a second map/projection system.
 - 2026-08-27: Executable core spatial invariants were added and CI validated, protecting one authoritative current physical position.
-- 2026-08-27: Direct inspection confirmed `core/ww2.ts` is now only a compatibility facade; search index currently reports zero consumers for its exported compatibility names, but direct source-level consumer proof is still required before deletion.
+- 2026-08-27: Direct inspection confirmed `core/ww2.ts` was only a compatibility facade; commit `3efec7b3e363ab12468a31d81c697ef153792b33` removed it after the active caller had already migrated. Subsequent CI run `33117957851` passed type-check and unit tests after the WW2 fixture correction. P2-S8 is now closed.
