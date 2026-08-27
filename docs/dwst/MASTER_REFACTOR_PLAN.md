@@ -23,6 +23,9 @@
 - The map-facing DWST path consumes canonical scenario state and geographic positions.
 - `DwstMapOverlay.vue` duplicate `defineProps` declaration was removed; CI run `33100195482` passed type-check and unit tests.
 - The active WW2 demo entry point was migrated from `runWW2Turn()` to the generic `simulateTurn()` path and CI run `33106939476` passed type-check and unit tests.
+- The duplicate WW2 square-law implementation was consolidated into the selectable WW2 scenario layer; the old `core/ww2SquareLaw.ts` implementation was removed and CI runs `33107940693` and `33107899018` passed type-check and unit tests.
+- Standalone `src/dwst/core/battlefield.ts` was removed after direct evidence showed zero current repository-search consumers for its public `BattlefieldState`, `moveUnit`, and `terrainAt` contract.
+- Direct inspection confirms canonical spatial state is already represented at the correct level: `UnitState.position: WorldPosition`. Spatial state therefore does **not** belong in `CanonicalState`, which remains resource/personnel/equipment authority.
 
 ### Confirmed remaining architecture problems
 
@@ -36,7 +39,7 @@
 
 Legacy `BattlefieldState` stores `Position { x, y }` and movement/detection operate on those coordinates. Canonical `UnitState` stores geographic `WorldPosition { lon, lat }`.
 
-**Status:** Confirmed. The standalone legacy battlefield implementation in `core/battlefield.ts` has been proven to have zero current repository-search consumers for `BattlefieldState`, `moveUnit`, and `terrainAt`. The module is safe to remove. Remaining P2-S2 work concerns any other hidden/renamed spatial representation, which must be checked through direct source inspection.
+**Status:** Partially resolved. The standalone legacy battlefield implementation in `core/battlefield.ts` had zero current repository-search consumers and has been removed. Remaining P2-S2 work concerns any hidden/renamed spatial representation and any legacy state still embedded elsewhere; these must be checked through direct source inspection.
 
 #### P2-S3 — Duplicate detection implementations
 
@@ -60,7 +63,7 @@ Verified mature ORBAT Mapper evidence shows a `MapAdapter` contract with `toLonL
 
 `SimulationState` still contains `BattlefieldState`, and the legacy resolver uses it for movement and detection. Previous removal attempts caused concrete CI failures from remaining consumers.
 
-**Status:** Confirmed historically. The standalone `core/battlefield.ts` implementation has now been proven to have zero current consumers and is being removed. Any remaining `BattlefieldState` references must be treated separately and verified directly.
+**Status:** Historically confirmed. The standalone `core/battlefield.ts` implementation has now been removed. Any remaining `BattlefieldState` references must be treated separately and verified directly.
 
 #### P2-S7 — Map/simulation spatial consistency invariant needs executable protection
 
@@ -84,26 +87,32 @@ A previous audit hypothesis treated detection as absent from the canonical WW2 p
 
 Direct inspection found the same WW2 square-law combat implementation represented both in `core/ww2SquareLaw.ts` and the new selectable WW2 scenario module. This duplicates an era-specific mechanic across architectural layers and risks future divergence.
 
-**Status:** Migration in progress. The canonical WW2 square-law implementation has been moved into `scenarios/ww2/combat.ts`, and the generic era registry is being bound to that scenario-owned implementation. The old `core/ww2SquareLaw.ts` has been removed. CI must validate the consolidation before any further cleanup.
+**Status:** Resolved. The canonical WW2 square-law implementation is now in `scenarios/ww2/combat.ts`, the generic era registry is bound to that scenario-owned implementation, the old `core/ww2SquareLaw.ts` has been removed, and CI runs `33107940693` and `33107899018` passed type-check and unit tests.
 
 #### P2-S12 — Standalone legacy battlefield module has zero current consumers
 
 Direct repository evidence found `src/dwst/core/battlefield.ts` contains a complete parallel `BattlefieldState`/`Position {x,y}` model plus `terrainAt()` and `moveUnit()`. Repository searches for `BattlefieldState`, `moveUnit`, `terrainAt`, `position.x`, and `resolveUnifiedTurn` returned no current consumers for this standalone module. This is distinct from any remaining legacy state embedded elsewhere.
 
-**Status:** Confirmed safe deletion. Remove `src/dwst/core/battlefield.ts`; do not replace it with another map/battlefield module. Preserve needed terrain/movement behavior only through canonical state/environment inputs and existing generic/era-neutral mechanisms.
+**Status:** Resolved. `src/dwst/core/battlefield.ts` was deleted. No replacement battlefield/map module was created.
+
+#### P2-S13 — Canonical resource state does not own spatial state
+
+Direct inspection of `src/dwst/core/canonicalState.ts` confirms `CanonicalState` contains personnel, equipment instances, crew assignments, and equipment definitions, but no spatial position. Direct inspection of `src/dwst/core/types.ts` confirms the canonical physical position already exists on `UnitState.position: WorldPosition`, while `ScenarioState` owns the collection of `UnitState` records and scenario-wide state.
+
+**Status:** Resolved design clarification. Do **not** add `WorldPosition` to `CanonicalState`. Spatial state belongs to `UnitState`/`ScenarioState`; `CanonicalState` remains the canonical resource/personnel/equipment authority.
 
 ### Next investigation / implementation order
 
 1. Prove all callers/entry points of `resolveUnifiedTurn()` using direct repository evidence; do not trust false-negative code-search results.
-2. Prove all callers of legacy `detect()` and `moveUnit()`.
+2. Prove all callers of legacy `detect()` and any remaining legacy `moveUnit()` implementation.
 3. Preserve/expand tests around observed WW2 movement, combat, sustainment, time, and detection behavior before removing the WW2 compatibility shim.
 4. Determine whether the generic engine needs a ruleset-owned detection policy/interface so detection behavior remains era-configurable rather than WW2-specific.
 5. Identify the exact ORBAT Mapper integration boundary used by the application for geographic/map conversion.
 6. If a verified bridge exists, reuse it. If not, define the smallest explicit interface needed; do not implement an independent projection.
 7. Migrate detection consumers to canonical `WorldPosition`.
 8. Migrate movement consumers to canonical `WorldPosition`, preserving observed movement behavior through explicit rules/terrain inputs.
-9. Migrate terrain/logistics dependencies that currently require `BattlefieldState`.
-10. Remove the legacy `detect()` and `moveUnit()` implementations only after zero required consumers are proven.
+9. Migrate terrain/logistics dependencies that currently require legacy battlefield state.
+10. Remove the legacy `detect()` and remaining legacy movement implementations only after zero required consumers are proven.
 11. Remove `BattlefieldState` from operational state only after migration tests and CI establish that canonical state is sufficient.
 12. Remove `core/ww2.ts` only after its active/required callers are migrated and WW2 behavior is covered by the selectable WW2 ruleset.
 13. Run a final whole-project audit for duplicate state authority, coordinate systems, era leakage, mutation boundaries, and hidden legacy consumers.
@@ -118,5 +127,6 @@ Direct repository evidence found `src/dwst/core/battlefield.ts` contains a compl
 - 2026-08-27: Confirmed duplicate `defineProps` declaration in `DwstMapOverlay.vue`; removed and validated by green CI run `33100195482`.
 - 2026-08-27: Corrected an earlier detection finding: `core/combat.ts` already invokes canonical `detectContacts(state)` during engagement resolution. Detection mechanics therefore exist canonically; the integration/era-neutral composition remains the task.
 - 2026-08-27: Confirmed WW2-specific turn orchestration remained in `src/dwst/core/ww2.ts`; active demo caller was migrated to generic `simulateTurn()` and validated by green CI run `33106939476`.
-- 2026-08-27: Confirmed duplicate WW2 square-law implementations across core and scenario layers; consolidated the active implementation into the selectable WW2 scenario layer and removed the duplicate core module. Awaiting CI validation.
-- 2026-08-27: Confirmed standalone `src/dwst/core/battlefield.ts` is an independent x/y battlefield state implementation with no current repository-search consumers for its public state/helpers; safe deletion is authorized by the direct-evidence rule.
+- 2026-08-27: Confirmed duplicate WW2 square-law implementations across core and scenario layers; consolidated the active implementation into the selectable WW2 scenario layer, removed the duplicate core module, and validated with green CI runs `33107940693` and `33107899018`.
+- 2026-08-27: Confirmed standalone `src/dwst/core/battlefield.ts` is an independent x/y battlefield state implementation with no current repository-search consumers for its public state/helpers; safely deleted it.
+- 2026-08-27: Direct inspection confirmed `CanonicalState` is intentionally resource/personnel/equipment authority only, while `UnitState.position: WorldPosition` is the canonical physical-position field. Do not merge spatial state into the resource state.
