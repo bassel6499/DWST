@@ -1,5 +1,5 @@
 import type { Order, ScenarioState, SimulationEvent, SimulationReport, UnitState } from './types';
-import { getEraRuleset, type EngineCoefficients, type EraRuleset } from './eraRules';
+import { DEFAULT_ENGINE, getEraRuleset, type EngineCoefficients, type EraRuleset } from './eraRules';
 import { assessUnit } from './unitAssessment';
 import type { SimulationBaseline } from './simulationBaseline';
 import { resolveEngagements } from './combat';
@@ -7,21 +7,15 @@ import { applyCombatResult } from './combatState';
 
 const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 
-const DEFAULT_COEFFICIENTS: EngineCoefficients = {
-  movementHours: 6, movementReadinessWeight: 0.65, movementCommandWeight: 0.3, movementFatigue: 0.04, movementWear: 0.02, movementFuel: 0.04,
-  turnFatigue: 0.01, logisticsDrain: 0.015, readinessDrain: 0.005, readinessLogisticsWeight: 0.4, readinessFatiguePenalty: 0.35, readinessWearPenalty: 0.25,
-  trainingEffect: 0.25, experienceEffect: 0.25, cohesionEffect: 0.25, moraleEffect: 0.25, commandEffect: 0.2,
-};
-
 /** Deterministic engine orchestration. Historical behavior belongs in rulesets. */
-export function effectiveReadiness(unit: UnitState, coefficients: EngineCoefficients = DEFAULT_COEFFICIENTS): number {
+export function effectiveReadiness(unit: UnitState, coefficients: EngineCoefficients = DEFAULT_ENGINE): number {
   return clamp(unit.readiness *
     (1 - coefficients.readinessLogisticsWeight + coefficients.readinessLogisticsWeight * unit.logistics) *
     (1 - coefficients.readinessFatiguePenalty * unit.fatigue) *
     (1 - coefficients.readinessWearPenalty * unit.wear));
 }
 
-export function effectiveCombatPower(unit: UnitState, coefficients: EngineCoefficients = DEFAULT_COEFFICIENTS): number {
+export function effectiveCombatPower(unit: UnitState, coefficients: EngineCoefficients = DEFAULT_ENGINE): number {
   return Math.max(0, unit.combatPower * effectiveReadiness(unit, coefficients) *
     (1 - coefficients.trainingEffect + coefficients.trainingEffect * unit.training) *
     (1 - coefficients.experienceEffect + coefficients.experienceEffect * unit.experience) *
