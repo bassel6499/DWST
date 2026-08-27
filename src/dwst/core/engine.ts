@@ -2,6 +2,8 @@ import type { Order, ScenarioState, SimulationEvent, SimulationReport, UnitState
 import { getEraRuleset, type EngineCoefficients, type EraRuleset } from './eraRules';
 import { assessUnit } from './unitAssessment';
 import type { SimulationBaseline } from './simulationBaseline';
+import { resolveEngagements } from './combat';
+import { applyCombatResult } from './combatState';
 
 const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 
@@ -65,7 +67,28 @@ export function resolveTurn(state: ScenarioState, rules: EraRuleset = getEraRule
     if (baseline) next.status = assessUnit(next, baseline, rules.unitAssessment).status;
     return next;
   });
-  return { turn, elapsedHours: state.elapsedHours + hours, events, units };
+
+  const resolvedState: ScenarioState = { ...state, units: Object.fromEntries(units.map((unit) => [unit.id, unit])) };
+  const engagements = rules.resolveCombat ? resolveEngagements(resolvedState) : [];
+
+  for (const engagement of engagements) {
+    const attacker = resolvedState.units[engagement.attackerId];
+    const defender = resolvedState.units[engagement.defenderId];
+    if (!attacker || !defender) continue;
+
+    const applied = applyCombatResult(attacker, defender, engagement);
+    resolvedState.units[attacker.id] = applied.attacker;
+    resolvedState.units[defender.id] = applied.defender;
+    events.push({
+      turn,
+      phase: 'combat',
+      message: engagement.result,
+      unitIds: [attacker.id, defender.id],
+    });
+  }
+
+  const finalUnits = Object.values(resolvedState.units);
+  return { turn, elapsedHours: state.elapsedHours + hours, events, units: finalUnits };
 }
 
 /** Explicit state application for callers that want to advance a live scenario. */
