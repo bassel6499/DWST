@@ -45,7 +45,7 @@ Legacy `BattlefieldState` stores `Position { x, y }` and movement/detection oper
 
 `detection.ts` contains canonical `detectContacts(ScenarioState, ...)` using `WorldPosition` and a compatibility `detect(BattlefieldState, ...)` using local `x/y` coordinates.
 
-**Status:** Confirmed. The legacy detector must be retired only after its consumers and required behavior are migrated.
+**Status:** Implementation removed; awaiting CI validation. The compatibility detector was directly inspected and found to be the remaining consumer-side legacy path. No current repository-search consumers for `detect()` were found.
 
 #### P2-S4 — No verified DWST conversion from legacy `x/y` to geographic position
 
@@ -63,7 +63,7 @@ Verified mature ORBAT Mapper evidence shows a `MapAdapter` contract with `toLonL
 
 `SimulationState` still contains `BattlefieldState`, and the legacy resolver uses it for movement and detection. Previous removal attempts caused concrete CI failures from remaining consumers.
 
-**Status:** Historically confirmed. The standalone `core/battlefield.ts` implementation has now been removed. Any remaining `BattlefieldState` references must be treated separately and verified directly.
+**Status:** Partially resolved. Standalone `core/battlefield.ts` has been removed. `simulationState.ts` was subsequently identified as dead legacy operational state and removed; remaining legacy references must be verified directly.
 
 #### P2-S7 — Map/simulation spatial consistency invariant needs executable protection
 
@@ -107,13 +107,13 @@ Direct inspection of `src/dwst/core/simulationState.ts` found that it imports `B
 
 Direct repository searches found no current consumers for `simulationState`, `SimulationState`, or `createSimulationState` on `audit/canonical-state-refactor`.
 
-**Status:** Confirmed dead legacy dependency. The module is approved for removal; canonical runtime state remains `ScenarioState`, with `UnitState.position: WorldPosition`.
+**Status:** Implementation removed; awaiting CI validation. Canonical runtime state remains `ScenarioState`, with `UnitState.position: WorldPosition`.
 
 ### Next investigation / implementation order
 
-1. Remove the now-dead `simulationState.ts` module and retire the legacy `detect(BattlefieldState, ...)` compatibility path, then run CI.
+1. Validate the P2-S3/P2-S14 cleanup with CI.
 2. Prove all callers/entry points of `resolveUnifiedTurn()` using direct repository evidence; do not trust false-negative code-search results.
-3. Prove all callers of legacy `detect()` and any remaining legacy `moveUnit()` implementation.
+3. Prove all callers of any remaining legacy detection or movement implementations.
 4. Preserve/expand tests around observed WW2 movement, combat, sustainment, time, and detection behavior before removing the WW2 compatibility shim.
 5. Determine whether the generic engine needs a ruleset-owned detection policy/interface so detection behavior remains era-configurable rather than WW2-specific.
 6. Identify the exact ORBAT Mapper integration boundary used by the application for geographic/map conversion.
@@ -121,7 +121,7 @@ Direct repository searches found no current consumers for `simulationState`, `Si
 8. Migrate detection consumers to canonical `WorldPosition`.
 9. Migrate movement consumers to canonical `WorldPosition`, preserving observed movement behavior through explicit rules/terrain inputs.
 10. Migrate terrain/logistics dependencies that currently require legacy battlefield state.
-11. Remove the legacy detect and remaining legacy movement implementations only after zero required consumers are proven.
+11. Remove remaining legacy movement implementations only after zero required consumers are proven.
 12. Remove `BattlefieldState` from operational state only after migration tests and CI establish that canonical state is sufficient.
 13. Remove `core/ww2.ts` only after its active/required callers are migrated and WW2 behavior is covered by the selectable WW2 ruleset.
 14. Run a final whole-project audit for duplicate state authority, coordinate systems, era leakage, mutation boundaries, and hidden legacy consumers.
@@ -139,4 +139,5 @@ Direct repository searches found no current consumers for `simulationState`, `Si
 - 2026-08-27: Confirmed duplicate WW2 square-law implementations across core and scenario layers; consolidated the active implementation into the selectable WW2 scenario layer, removed the duplicate core module, and validated with green CI runs `33107940693` and `33107899018`.
 - 2026-08-27: Confirmed standalone `src/dwst/core/battlefield.ts` is an independent x/y battlefield state implementation with no current repository-search consumers for its public state/helpers; safely deleted it.
 - 2026-08-27: Direct inspection confirmed `CanonicalState` is intentionally resource/personnel/equipment authority only, while `UnitState.position: WorldPosition` is the canonical physical-position field. Do not merge spatial state into the resource state.
-- 2026-08-27: Direct inspection confirmed `simulationState.ts` still depended on the deleted `BattlefieldState`; direct searches found no current consumers, so it is approved for removal as dead legacy operational state.
+- 2026-08-27: Direct inspection confirmed `simulationState.ts` still depended on the deleted `BattlefieldState`; direct searches found no current consumers, so it was removed as dead legacy operational state.
+- 2026-08-27: Direct inspection confirmed `detection.ts` still contained a legacy `detect(BattlefieldState, ...)` compatibility implementation after the battlefield module was removed; direct searches found no current consumers, so the compatibility path was removed without altering canonical `detectContacts()`.
