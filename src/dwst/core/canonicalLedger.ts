@@ -5,7 +5,7 @@ export type PersonnelStatus='available'|'training'|'assigned'|'wounded'|'killed'
 export type CrewExperience='trained'|'experienced'|'veteran';
 export interface PersonnelLedger { total:number; available:number; assigned:number; training:number; wounded:number; missing:number; killed:number; }
 /** Specialist manpower is a subset of total personnel. qualified + training = personnel; experience levels partition qualified. */
-export interface SpecialistPool { specialty:CrewSpecialty; personnel:number; qualified:number; training:number; casualties:number; veteran:number; experienced:number; trained:number; }
+export interface SpecialistPool { specialty:CrewSpecialty; personnel:number; qualified:number; training:number; casualties:number; veteran:number; experienced:number; trained:number; personnelIds?:string[]; }
 export interface EquipmentLedger { type:EquipmentType; designation:string; total:number; operational:number; damaged:number; destroyed:number; assigned:number; }
 /** requiredQualifiedCrew is authoritative. personnelPerSystem is optional legacy/audit metadata and must agree when present. */
 export interface EquipmentCrewLink { equipmentId:string; crewSpecialty:CrewSpecialty; requiredQualifiedCrew:number; personnelPerSystem?:number; }
