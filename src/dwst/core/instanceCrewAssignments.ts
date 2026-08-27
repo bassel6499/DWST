@@ -1,5 +1,6 @@
 import type { PersonnelRegistry } from './personnelRegistry';
 import type { EquipmentDefinition } from './equipmentCatalog';
+import { resolveCrewRequirement } from './equipmentCatalog';
 import type { EquipmentInstance } from './equipmentInstances';
 
 export interface InstanceCrewAssignment { instanceId:string; slot:number; personnelId:string; specialty:string; }
@@ -16,12 +17,16 @@ export function validateInstanceCrewAssignments(assignments:InstanceCrewAssignme
   if(instance.status!=='operational') errors.push(`Non-operational equipment cannot receive active crew: ${a.instanceId}`);
   if(!Number.isInteger(a.slot)||a.slot<1) errors.push(`Invalid crew slot: ${a.instanceId}/${a.slot}`);
   const slotKey=`${a.instanceId}:${a.slot}`;
-  if(usedSlots.has(slotKey)) errors.push(`Crew slot occupied twice: ${slotKey}`); usedSlots.add(slotKey);
-  if(usedPersonnel.has(a.personnelId)) errors.push(`Personnel assigned to multiple equipment instances: ${a.personnelId}`); usedPersonnel.add(a.personnelId);
+  if(usedSlots.has(slotKey)) errors.push(`Crew slot occupied twice: ${slotKey}`);
+  usedSlots.add(slotKey);
+  if(usedPersonnel.has(a.personnelId)) errors.push(`Personnel assigned to multiple equipment instances: ${a.personnelId}`);
+  usedPersonnel.add(a.personnelId);
   if(p.status!=='assigned') errors.push(`Personnel must be assigned before crewing equipment: ${a.personnelId}`);
   if(!p.qualifications.includes(a.specialty)) errors.push(`Personnel lacks qualification ${a.specialty}: ${a.personnelId}`);
-  const requirement=definition.crewRequirementId.split(':')[2];
-  if(a.specialty!==requirement) errors.push(`Crew specialty does not match equipment requirement: ${a.instanceId}`);
+  let requirement;
+  try { requirement=resolveCrewRequirement(definition); }
+  catch { errors.push(`Missing crew requirement for equipment definition: ${definition.id}`); continue; }
+  if(a.specialty!==requirement.specialty) errors.push(`Crew specialty does not match equipment requirement: ${a.instanceId}`);
  }
  return errors;
 }
