@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import DwstCommandPanel from './DwstCommandPanel.vue';
 import { parseNaturalLanguageOrder } from '@/dwst/core/orderProcessor';
-import { runWW2Turn } from '@/dwst/core/ww2';
+import { simulateTurn } from '@/dwst/core/simulationStep';
 import type { Order, ScenarioState, UnitState } from '@/dwst/core/types';
 
 const makeUnit = (id: string, name: string, side: UnitState['side'], lon: number, lat: number): UnitState => ({
@@ -35,11 +35,13 @@ function issueOrder(unitId: string, order: Order) {
 }
 
 function advance() {
-  const result = runWW2Turn(state.value);
-  for (const updated of result.units) state.value.units[updated.id] = updated;
-  state.value.elapsedHours = result.elapsedHours;
-  state.value.events.push(...result.events);
-  report.value.unshift(`Turn ${result.turn} complete. ${result.elapsedHours} hours elapsed. Logistics, fatigue and wear updated.`);
+  const result = simulateTurn(state.value);
+  state.value = result.state;
+  const combatEvents = result.report.events.filter(event => event.phase === 'combat');
+  report.value.unshift(
+    `Turn ${result.report.turn} complete. ${result.report.elapsedHours} hours elapsed. ` +
+    `Movement, ${combatEvents.length} combat event(s), readiness, fatigue and logistics resolved by the selected era ruleset.`
+  );
 }
 </script>
 
