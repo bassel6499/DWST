@@ -9,6 +9,10 @@ export interface Engagement {
   defenderId: string;
   distanceKm: number;
   detectedByAttacker: boolean;
+  attackerLosses: number;
+  defenderLosses: number;
+  attackerEquipmentLosses: number;
+  defenderEquipmentLosses: number;
   result: string;
 }
 
@@ -54,6 +58,10 @@ export function resolveEngagements(state: ScenarioState): Engagement[] {
       defenderId: defender.id,
       distanceKm: c.distanceKm,
       detectedByAttacker: true,
+      attackerLosses: result.attackerLosses,
+      defenderLosses: result.defenderLosses,
+      attackerEquipmentLosses: result.attackerEquipmentLosses,
+      defenderEquipmentLosses: result.defenderEquipmentLosses,
       result: `${attacker.name}: -${result.attackerLosses} personnel; ${defender.name}: -${result.defenderLosses} personnel.`,
     });
   }
