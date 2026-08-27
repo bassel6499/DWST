@@ -5,8 +5,9 @@ import type { CanonicalState } from './canonicalState';
 const canonicalState: CanonicalState = {
   personnel: {
     personnel: [
-      { id: 'p1', unitId: 'u1', status: 'assigned', qualifications: ['tank'], experience: {} },
-      { id: 'p2', unitId: 'u1', status: 'assigned', qualifications: ['tank'], experience: {} },
+      { id: 'p1', unitId: 'u1', status: 'assigned', qualifications: ['tankCrew'], experience: {} },
+      { id: 'p2', unitId: 'u1', status: 'assigned', qualifications: ['tankCrew'], experience: {} },
+      { id: 'p3', unitId: 'u1', status: 'assigned', qualifications: ['tankCrew'], experience: {} },
     ],
   },
   equipment: [
@@ -14,11 +15,12 @@ const canonicalState: CanonicalState = {
     { instanceId: 'e2', definitionId: 'tank', unitId: 'u1', status: 'damaged' },
   ],
   crewAssignments: [
-    { instanceId: 'e1', slot: 1, personnelId: 'p1', specialty: 'tank' },
-    { instanceId: 'e1', slot: 2, personnelId: 'p2', specialty: 'tank' },
+    { instanceId: 'e1', slot: 1, personnelId: 'p1', specialty: 'tankCrew' },
+    { instanceId: 'e1', slot: 2, personnelId: 'p2', specialty: 'tankCrew' },
+    { instanceId: 'e1', slot: 3, personnelId: 'p3', specialty: 'tankCrew' },
   ],
   equipmentDefinitions: [
-    { id: 'tank', name: 'Tank', era: 'modern', equipmentType: 'armour', crewRequirementId: 'tankCrew' },
+    { id: 'tank', name: 'Tank', era: 'Modern', equipmentType: 'tank', crewRequirementId: 'tankCrew' },
   ],
 };
 
