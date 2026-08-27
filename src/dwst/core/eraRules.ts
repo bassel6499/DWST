@@ -22,6 +22,15 @@ export interface EngineCoefficients {
   commandEffect:number;
 }
 
+export interface UnitAssessmentPolicy {
+  /** Personnel fraction at or below which the unit is destroyed. */
+  destroyedPersonnel:number;
+  /** Personnel fraction at or below which the unit is disorganized. */
+  disorganizedPersonnel:number;
+  /** Mean readiness/morale/cohesion at or below which the unit is disorganized. */
+  disorganizedCondition:number;
+}
+
 export interface EraRuleset {
   id:EraId;
   label:string;
@@ -35,6 +44,7 @@ export interface EraRuleset {
   permanentAttrition:boolean;
   logisticsEnabled:boolean;
   engine:EngineCoefficients;
+  unitAssessment:UnitAssessmentPolicy;
   notes:string[];
 }
 
@@ -58,7 +68,13 @@ const DEFAULT_ENGINE:EngineCoefficients={
   commandEffect:0.2,
 };
 
-const base=(id:EraId,label:string,combatLaw:CombatLaw,turn:number):EraRuleset=>({id,label,implemented:false,combatLaw,rangedFire:true,spatialModel:'pde-hybrid',defaultTurnHours:turn,equipmentCrewCoupling:true,permanentAttrition:true,logisticsEnabled:true,engine:{...DEFAULT_ENGINE},notes:['Ruleset scaffold only; not runnable until its era-specific mechanics are implemented and validated.']});
+const DEFAULT_UNIT_ASSESSMENT:UnitAssessmentPolicy={
+  destroyedPersonnel:0.2,
+  disorganizedPersonnel:0.5,
+  disorganizedCondition:0.4,
+};
+
+const base=(id:EraId,label:string,combatLaw:CombatLaw,turn:number):EraRuleset=>({id,label,implemented:false,combatLaw,rangedFire:true,spatialModel:'pde-hybrid',defaultTurnHours:turn,equipmentCrewCoupling:true,permanentAttrition:true,logisticsEnabled:true,engine:{...DEFAULT_ENGINE},unitAssessment:{...DEFAULT_UNIT_ASSESSMENT},notes:['Ruleset scaffold only; not runnable until its era-specific mechanics are implemented and validated.']});
 
 export const ERA_RULESETS:Record<EraId,EraRuleset>={
  ancient:{...base('ancient','Ancient','linear',24),rangedFire:false,spatialModel:'pde',notes:['Ruleset scaffold only; not runnable until its era-specific mechanics are implemented and validated.']},
@@ -77,4 +93,4 @@ export const ERA_RULESETS:Record<EraId,EraRuleset>={
 
 export function getEraRuleset(id:EraId):EraRuleset{return ERA_RULESETS[id];}
 export function getImplementedEraRulesets():EraRuleset[]{return Object.values(ERA_RULESETS).filter((r)=>r.implemented);}
-export function validateEraRuleset(r:EraRuleset):string[]{const e:string[]=[];if(!r.id||!r.label)e.push('Era ruleset requires id and label');if(r.defaultTurnHours<=0)e.push('defaultTurnHours must be positive');if(r.permanentAttrition!==true)e.push('permanentAttrition must remain enabled for DWST accounting');for(const [k,v] of Object.entries(r.engine)){if(!Number.isFinite(v)||v<0)e.push(`engine.${k} must be a non-negative finite number`);}if(r.engine.movementHours<=0)e.push('engine.movementHours must be positive');return e;}
+export function validateEraRuleset(r:EraRuleset):string[]{const e:string[]=[];if(!r.id||!r.label)e.push('Era ruleset requires id and label');if(r.defaultTurnHours<=0)e.push('defaultTurnHours must be positive');if(r.permanentAttrition!==true)e.push('permanentAttrition must remain enabled for DWST accounting');for(const [k,v] of Object.entries(r.engine)){if(!Number.isFinite(v)||v<0)e.push(`engine.${k} must be a non-negative finite number`);}if(r.engine.movementHours<=0)e.push('engine.movementHours must be positive');const a=r.unitAssessment;if(!a||!Number.isFinite(a.destroyedPersonnel)||!Number.isFinite(a.disorganizedPersonnel)||!Number.isFinite(a.disorganizedCondition))e.push('unitAssessment thresholds must be finite numbers');else{if(a.destroyedPersonnel<0||a.destroyedPersonnel>1)e.push('unitAssessment.destroyedPersonnel must be between 0 and 1');if(a.disorganizedPersonnel<0||a.disorganizedPersonnel>1)e.push('unitAssessment.disorganizedPersonnel must be between 0 and 1');if(a.disorganizedCondition<0||a.disorganizedCondition>1)e.push('unitAssessment.disorganizedCondition must be between 0 and 1');if(a.destroyedPersonnel>a.disorganizedPersonnel)e.push('unitAssessment.destroyedPersonnel must not exceed disorganizedPersonnel');}return e;}
