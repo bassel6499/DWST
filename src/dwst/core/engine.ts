@@ -1,5 +1,7 @@
 import type { Order, ScenarioState, SimulationEvent, SimulationReport, UnitState } from './types';
 import { getEraRuleset, type EngineCoefficients, type EraRuleset } from './eraRules';
+import { assessUnit } from './unitAssessment';
+import type { SimulationBaseline } from './simulationBaseline';
 
 const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 
@@ -46,7 +48,7 @@ function resolveMovement(unit: UnitState, hours: number, rules: EngineCoefficien
 }
 
 /** Pure turn resolution. The supplied ScenarioState is never mutated. */
-export function resolveTurn(state: ScenarioState, rules: EraRuleset = getEraRuleset(state.era)): SimulationReport {
+export function resolveTurn(state: ScenarioState, rules: EraRuleset = getEraRuleset(state.era), baseline?: SimulationBaseline): SimulationReport {
   if (!rules) throw new Error('No ruleset selected');
   const events: SimulationEvent[] = [];
   const hours = state.turnHours;
@@ -60,6 +62,7 @@ export function resolveTurn(state: ScenarioState, rules: EraRuleset = getEraRule
     if (rules.logisticsEnabled) next.logistics = clamp(next.logistics - rules.engine.logisticsDrain * scale);
     next.readiness = clamp(next.readiness - rules.engine.readinessDrain * scale);
     next.combatPower = effectiveCombatPower(next, rules.engine);
+    if (baseline) next.status = assessUnit(next, baseline, rules.unitAssessment).status;
     return next;
   });
   return { turn, elapsedHours: state.elapsedHours + hours, events, units };
