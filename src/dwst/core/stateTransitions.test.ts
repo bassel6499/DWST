@@ -4,7 +4,7 @@ import { applyResourceOperations } from './stateTransitions';
 
 describe('state transitions',()=>{
  const base={
-  personnel:{total:3,available:1,assigned:1,training:1,wounded:0,missing:0,killed:0},
+  personnel:{total:4,available:2,assigned:1,training:1,wounded:0,missing:0,killed:0},
   specialists:[{specialty:'tankCrew' as any,personnelIds:['P2','P3'],personnel:2,qualified:1,training:1,casualties:0,veteran:0,experienced:0,trained:1}],
   equipment:[{type:'tank' as any,designation:'Tank 1',total:1,operational:1,damaged:0,destroyed:0,assigned:0}],
   links:[{equipmentId:'Tank 1',crewSpecialty:'tankCrew' as any,requiredQualifiedCrew:1}]
