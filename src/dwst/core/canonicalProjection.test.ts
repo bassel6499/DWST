@@ -5,7 +5,7 @@ import type { EquipmentInstance } from './equipmentInstances';
 import type { InstanceCrewAssignment } from './instanceCrewAssignments';
 import type { PersonnelRegistry } from './personnelRegistry';
 
-const definitions:EquipmentDefinition[]=[{id:'tank',name:'Tank',category:'armour',crewRequired:2,crewSpecialty:'tank'} as EquipmentDefinition];
+const definitions:EquipmentDefinition[]=[{id:'tank',name:'Tank',era:'modern',equipmentType:'armour',crewRequirementId:'tank-crew'}];
 const instances:EquipmentInstance[]=[
  {instanceId:'a',definitionId:'tank',unitId:'u1',status:'operational'},
  {instanceId:'b',definitionId:'tank',unitId:'u1',status:'damaged'},
