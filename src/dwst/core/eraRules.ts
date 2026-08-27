@@ -1,7 +1,47 @@
 import type { EraId } from './types';
+
 export type CombatLaw='linear'|'mixed'|'new-square'|'square'|'contemporary-hybrid'|'extended-square';
-export interface EraRuleset { id:EraId; label:string; combatLaw:CombatLaw; rangedFire:boolean; spatialModel:'none'|'pde'|'pde-hybrid'; defaultTurnHours:number; equipmentCrewCoupling:boolean; permanentAttrition:boolean; logisticsEnabled:boolean; notes:string[]; }
-const base=(id:EraId,label:string,combatLaw:CombatLaw,turn:number):EraRuleset=>({id,label,combatLaw,rangedFire:true,spatialModel:'pde-hybrid',defaultTurnHours:turn,equipmentCrewCoupling:true,permanentAttrition:true,logisticsEnabled:true,notes:[]});
+
+export interface EngineCoefficients {
+  movementHours:number;
+  movementReadinessWeight:number;
+  movementCommandWeight:number;
+  movementFatigue:number;
+  movementWear:number;
+  movementFuel:number;
+  turnFatigue:number;
+  logisticsDrain:number;
+  readinessDrain:number;
+}
+
+export interface EraRuleset {
+  id:EraId;
+  label:string;
+  combatLaw:CombatLaw;
+  rangedFire:boolean;
+  spatialModel:'none'|'pde'|'pde-hybrid';
+  defaultTurnHours:number;
+  equipmentCrewCoupling:boolean;
+  permanentAttrition:boolean;
+  logisticsEnabled:boolean;
+  engine:EngineCoefficients;
+  notes:string[];
+}
+
+const DEFAULT_ENGINE:EngineCoefficients={
+  movementHours:6,
+  movementReadinessWeight:0.65,
+  movementCommandWeight:0.3,
+  movementFatigue:0.04,
+  movementWear:0.02,
+  movementFuel:0.04,
+  turnFatigue:0.01,
+  logisticsDrain:0.015,
+  readinessDrain:0.005,
+};
+
+const base=(id:EraId,label:string,combatLaw:CombatLaw,turn:number):EraRuleset=>({id,label,combatLaw,rangedFire:true,spatialModel:'pde-hybrid',defaultTurnHours:turn,equipmentCrewCoupling:true,permanentAttrition:true,logisticsEnabled:true,engine:{...DEFAULT_ENGINE},notes:[]});
+
 export const ERA_RULESETS:Record<EraId,EraRuleset>={
  ancient:{...base('ancient','Ancient','linear',24),rangedFire:false,spatialModel:'pde',notes:['Intermittent combat; qualitative cohesion and morale modifiers.']},
  medieval:{...base('medieval','Medieval','mixed',12),spatialModel:'pde',notes:['Mixed close-combat and missile effects; siege-aware terrain.']},
@@ -16,5 +56,6 @@ export const ERA_RULESETS:Record<EraId,EraRuleset>={
  contemporary:{...base('contemporary','Contemporary','contemporary-hybrid',1),notes:['Networked, multi-domain and asymmetric operations.']},
  future:{...base('future','Future','extended-square',1),notes:['Hypothetical multi-domain/AI systems; assumptions must be scenario-defined.']}
 };
+
 export function getEraRuleset(id:EraId):EraRuleset{return ERA_RULESETS[id];}
-export function validateEraRuleset(r:EraRuleset):string[]{const e:string[]=[];if(!r.id||!r.label)e.push('Era ruleset requires id and label');if(r.defaultTurnHours<=0)e.push('defaultTurnHours must be positive');if(r.permanentAttrition!==true)e.push('permanentAttrition must remain enabled for DWST accounting');return e;}
+export function validateEraRuleset(r:EraRuleset):string[]{const e:string[]=[];if(!r.id||!r.label)e.push('Era ruleset requires id and label');if(r.defaultTurnHours<=0)e.push('defaultTurnHours must be positive');if(r.permanentAttrition!==true)e.push('permanentAttrition must remain enabled for DWST accounting');for(const [k,v] of Object.entries(r.engine)){if(!Number.isFinite(v)||v<0)e.push(`engine.${k} must be a non-negative finite number`);}if(r.engine.movementHours<=0)e.push('engine.movementHours must be positive');return e;}
