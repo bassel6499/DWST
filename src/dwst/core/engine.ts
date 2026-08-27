@@ -1,10 +1,11 @@
 import type { Order, ScenarioState, SimulationEvent, SimulationReport, UnitState } from './types';
+import { getEraRuleset, type EngineCoefficients, type EraRuleset } from './eraRules';
 
 const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 
 /**
- * Deterministic baseline engine. This is deliberately conservative: DWST rules
- * are applied here, while era-specific combat coefficients will live in modules.
+ * Deterministic engine orchestration. Era-dependent coefficients are supplied
+ * by the selected ruleset; the engine remains unaware of historical eras.
  */
 export function effectiveReadiness(unit: UnitState): number {
   return clamp(
@@ -32,12 +33,12 @@ export function applyOrder(unit: UnitState, order: Order): UnitState {
   return { ...unit, order };
 }
 
-function resolveMovement(unit: UnitState, hours: number): SimulationEvent | undefined {
+function resolveMovement(unit: UnitState, hours: number, rules:EngineCoefficients): SimulationEvent | undefined {
   if (!unit.order?.destination || unit.status === 'destroyed') return undefined;
 
-  const distanceFactor = Math.min(1, hours / 6);
+  const distanceFactor = Math.min(1, hours / rules.movementHours);
   const readiness = effectiveReadiness(unit);
-  const completion = distanceFactor * (0.35 + 0.65 * readiness) * (0.7 + 0.3 * unit.commandQuality);
+  const completion = distanceFactor * (1 - rules.movementReadinessWeight + rules.movementReadinessWeight * readiness) * (1 - rules.movementCommandWeight + rules.movementCommandWeight * unit.commandQuality);
 
   const dx = unit.order.destination.lon - unit.position.lon;
   const dy = unit.order.destination.lat - unit.position.lat;
@@ -49,9 +50,9 @@ function resolveMovement(unit: UnitState, hours: number): SimulationEvent | unde
     lon: unit.position.lon + dx * ratio,
     lat: unit.position.lat + dy * ratio,
   };
-  unit.fatigue = clamp(unit.fatigue + 0.04 * distanceFactor);
-  unit.wear = clamp(unit.wear + 0.02 * distanceFactor);
-  unit.fuel = clamp(unit.fuel - 0.04 * distanceFactor);
+  unit.fatigue = clamp(unit.fatigue + rules.movementFatigue * distanceFactor);
+  unit.wear = clamp(unit.wear + rules.movementWear * distanceFactor);
+  unit.fuel = clamp(unit.fuel - rules.movementFuel * distanceFactor);
 
   return {
     turn: 0,
@@ -61,19 +62,21 @@ function resolveMovement(unit: UnitState, hours: number): SimulationEvent | unde
   };
 }
 
-export function resolveTurn(state: ScenarioState): SimulationReport {
+export function resolveTurn(state: ScenarioState, rules:EraRuleset=getEraRuleset(state.era)): SimulationReport {
+  const errors=rules ? [] : ['No ruleset selected'];
+  if(errors.length) throw new Error(errors[0]);
   const events: SimulationEvent[] = [];
   const hours = state.turnHours;
   const turn = Math.floor(state.elapsedHours / Math.max(hours, 1)) + 1;
 
   const units = Object.values(state.units).map((unit) => {
     const next = { ...unit, history: [...unit.history] };
-    const event = resolveMovement(next, hours);
+    const event = resolveMovement(next, hours, rules.engine);
     if (event) events.push({ ...event, turn });
 
-    next.fatigue = clamp(next.fatigue + 0.01 * (hours / 6));
-    next.logistics = clamp(next.logistics - 0.015 * (hours / 6));
-    next.readiness = clamp(next.readiness - 0.005 * (hours / 6));
+    next.fatigue = clamp(next.fatigue + rules.engine.turnFatigue * (hours / rules.engine.movementHours));
+    if(rules.logisticsEnabled) next.logistics = clamp(next.logistics - rules.engine.logisticsDrain * (hours / rules.engine.movementHours));
+    next.readiness = clamp(next.readiness - rules.engine.readinessDrain * (hours / rules.engine.movementHours));
 
     next.combatPower = effectiveCombatPower(next);
     return next;
