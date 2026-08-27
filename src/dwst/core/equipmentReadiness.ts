@@ -6,17 +6,24 @@ import type { InstanceCrewAssignment } from './instanceCrewAssignments';
 
 export interface EquipmentReadinessSummary { definitionId:string; operational:number; crewReady:number; combatReady:number; uncrewed:number; }
 
-/** Pure projection. Crew requirement is resolved from the authoritative equipment data contract. */
+/** Pure projection. Each personnel identity can contribute to at most one equipment instance. */
 export function projectEquipmentPoolReadiness(definition:EquipmentDefinition,instances:EquipmentInstance[],assignments:InstanceCrewAssignment[],registry:PersonnelRegistry):EquipmentReadinessSummary {
  const requirement=resolveCrewRequirement(definition);
  const relevant=instances.filter(i=>i.definitionId===definition.id);
  const operational=relevant.filter(i=>i.status==='operational');
  const personnelById=new Map(registry.personnel.map(p=>[p.id,p]));
+ const globallyUsedPersonnel=new Set<string>();
  let crewReady=0;
  for(const instance of operational){
-  const assigned=new Set(assignments.filter(a=>a.instanceId===instance.instanceId&&a.specialty===requirement.specialty).map(a=>a.personnelId));
-  const qualified=[...assigned].filter(id=>{const p=personnelById.get(id);return !!p&&p.status==='assigned'&&p.qualifications.includes(requirement.specialty);}).length;
-  if(qualified>=requirement.requiredQualifiedCrew) crewReady++;
+  const assigned=new Set<string>();
+  for(const a of assignments){
+   if(a.instanceId!==instance.instanceId||a.specialty!==requirement.specialty||assigned.has(a.personnelId)||globallyUsedPersonnel.has(a.personnelId)) continue;
+   const p=personnelById.get(a.personnelId);
+   if(!p||p.status!=='assigned'||!p.qualifications.includes(requirement.specialty)) continue;
+   assigned.add(a.personnelId);
+   globallyUsedPersonnel.add(a.personnelId);
+  }
+  if(assigned.size>=requirement.requiredQualifiedCrew) crewReady++;
  }
  return {definitionId:definition.id,operational:operational.length,crewReady,combatReady:crewReady,uncrewed:operational.length-crewReady};
 }
