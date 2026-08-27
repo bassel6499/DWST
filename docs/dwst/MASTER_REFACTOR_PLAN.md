@@ -22,6 +22,7 @@
 - Redundant simulation-step cloning was removed and CI subsequently passed.
 - The map-facing DWST path consumes canonical scenario state and geographic positions.
 - `DwstMapOverlay.vue` duplicate `defineProps` declaration was removed; CI run `33100195482` passed type-check and unit tests.
+- The active WW2 demo entry point was migrated from `runWW2Turn()` to the generic `simulateTurn()` path and CI run `33106939476` passed type-check and unit tests.
 
 ### Confirmed remaining architecture problems
 
@@ -69,9 +70,9 @@ The architecture requires one authoritative geographic position. A future invari
 
 #### P2-S8 — WW2 orchestration resides in `core`
 
-Direct inspection confirmed `src/dwst/core/ww2.ts` contains WW2-specific combat and turn orchestration (`resolveWW2Combat`, `runWW2Turn`). The generic engine/ruleset architecture already defines `EraRuleset` and a selectable WW2 ruleset. Keeping a WW2 turn orchestrator inside `core` risks making WW2 behavior part of the core execution architecture.
+Direct inspection confirmed `src/dwst/core/ww2.ts` contained WW2-specific combat and turn orchestration (`resolveWW2Combat`, `runWW2Turn`). The generic engine/ruleset architecture already defines `EraRuleset` and a selectable WW2 ruleset. Keeping a WW2 turn orchestrator inside `core` risked making WW2 behavior part of the core execution architecture.
 
-**Status:** Confirmed boundary violation. Do not simply move/delete the file; first migrate its active callers to the generic `simulateTurn()` / `resolveTurn()` path and preserve observed WW2 behavior through the WW2 ruleset.
+**Status:** Migration completed at the active entry point. `DwstDemoView.vue` now uses generic `simulateTurn()`. `core/ww2.ts` is retained only as a deprecated compatibility shim while remaining consumers are proven.
 
 #### P2-S9 — Canonical combat already owns canonical detection indirectly
 
@@ -79,22 +80,27 @@ A previous audit hypothesis treated detection as absent from the canonical WW2 p
 
 **Status:** Corrected finding. Do not create a second canonical detection engine or falsely classify detection as missing.
 
+#### P2-S10 — Duplicate WW2 combat implementation across core and scenario layers
+
+Direct inspection found the same WW2 square-law combat implementation represented both in `core/ww2SquareLaw.ts` and the new selectable WW2 scenario module. This duplicates an era-specific mechanic across architectural layers and risks future divergence.
+
+**Status:** Migration in progress. The canonical WW2 square-law implementation has been moved into `scenarios/ww2/combat.ts`, and the generic era registry is being bound to that scenario-owned implementation. The old `core/ww2SquareLaw.ts` has been removed. CI must validate the consolidation before any further cleanup.
+
 ### Next investigation / implementation order
 
 1. Prove all callers/entry points of `resolveUnifiedTurn()` using direct repository evidence; do not trust false-negative code-search results.
 2. Prove all callers of legacy `detect()` and `moveUnit()`.
-3. Prove the active application's WW2 entry point and migrate it from `runWW2Turn()` to the generic `simulateTurn()` / `resolveTurn()` path without changing the WW2 ruleset's identity.
-4. Preserve/expand tests around observed WW2 movement, combat, sustainment, time, and detection behavior before removing the WW2 orchestrator.
-5. Determine whether the generic engine needs a ruleset-owned detection policy/interface so detection behavior remains era-configurable rather than WW2-specific.
-6. Identify the exact ORBAT Mapper integration boundary used by the application for geographic/map conversion.
-7. If a verified bridge exists, reuse it. If not, define the smallest explicit interface needed; do not implement an independent projection.
-8. Migrate detection consumers to canonical `WorldPosition`.
-9. Migrate movement consumers to canonical `WorldPosition`, preserving observed movement behavior through explicit rules/terrain inputs.
-10. Migrate terrain/logistics dependencies that currently require `BattlefieldState`.
-11. Remove the legacy `detect()` and `moveUnit()` implementations only after zero required consumers are proven.
-12. Remove `BattlefieldState` from operational state only after migration tests and CI establish that canonical state is sufficient.
-13. Remove `core/ww2.ts` only after its active callers are migrated and WW2 behavior is covered by the selectable WW2 ruleset.
-14. Run a final whole-project audit for duplicate state authority, coordinate systems, era leakage, mutation boundaries, and hidden legacy consumers.
+3. Preserve/expand tests around observed WW2 movement, combat, sustainment, time, and detection behavior before removing the WW2 compatibility shim.
+4. Determine whether the generic engine needs a ruleset-owned detection policy/interface so detection behavior remains era-configurable rather than WW2-specific.
+5. Identify the exact ORBAT Mapper integration boundary used by the application for geographic/map conversion.
+6. If a verified bridge exists, reuse it. If not, define the smallest explicit interface needed; do not implement an independent projection.
+7. Migrate detection consumers to canonical `WorldPosition`.
+8. Migrate movement consumers to canonical `WorldPosition`, preserving observed movement behavior through explicit rules/terrain inputs.
+9. Migrate terrain/logistics dependencies that currently require `BattlefieldState`.
+10. Remove the legacy `detect()` and `moveUnit()` implementations only after zero required consumers are proven.
+11. Remove `BattlefieldState` from operational state only after migration tests and CI establish that canonical state is sufficient.
+12. Remove `core/ww2.ts` only after its active/required callers are migrated and WW2 behavior is covered by the selectable WW2 ruleset.
+13. Run a final whole-project audit for duplicate state authority, coordinate systems, era leakage, mutation boundaries, and hidden legacy consumers.
 
 ## Findings log
 
@@ -105,4 +111,5 @@ A previous audit hypothesis treated detection as absent from the canonical WW2 p
 - 2026-08-27: Confirmed DWST currently has no verified semantic conversion from legacy battlefield `x/y` to `WorldPosition`; no such conversion is to be invented.
 - 2026-08-27: Confirmed duplicate `defineProps` declaration in `DwstMapOverlay.vue`; removed and validated by green CI run `33100195482`.
 - 2026-08-27: Corrected an earlier detection finding: `core/combat.ts` already invokes canonical `detectContacts(state)` during engagement resolution. Detection mechanics therefore exist canonically; the integration/era-neutral composition remains the task.
-- 2026-08-27: Confirmed WW2-specific turn orchestration remains in `src/dwst/core/ww2.ts`; this is a core/era boundary violation that must be resolved without making WW2 the core mechanic.
+- 2026-08-27: Confirmed WW2-specific turn orchestration remained in `src/dwst/core/ww2.ts`; active demo caller was migrated to generic `simulateTurn()` and validated by green CI run `33106939476`.
+- 2026-08-27: Confirmed duplicate WW2 square-law implementations across core and scenario layers; consolidated the active implementation into the selectable WW2 scenario layer and removed the duplicate core module. Awaiting CI validation.
