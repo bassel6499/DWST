@@ -67,7 +67,7 @@ export interface EraRuleset {
   notes: string[];
 }
 
-const DEFAULT_ENGINE: EngineCoefficients = {
+export const DEFAULT_ENGINE: Readonly<EngineCoefficients> = {
   movementHours: 6,
   movementReadinessWeight: 0.65,
   movementCommandWeight: 0.3,
