@@ -11,6 +11,6 @@ describe('era ruleset registry',()=>{
  });
  it('keeps future eras as explicit scaffolds rather than pretending they are runnable',()=>{
   for(const ruleset of Object.values(ERA_RULESETS)) assert.equal(validateEraRuleset(ruleset).length,0);
-  assert.match(getEraRuleset('future').notes[0],'not runnable');
+  assert.match(getEraRuleset('future').notes[0],/not runnable/);
  });
 });
