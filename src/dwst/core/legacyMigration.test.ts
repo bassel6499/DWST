@@ -1,4 +1,5 @@
 import { strict as assert } from 'node:assert';
+import { describe, it } from 'vitest';
 import { migrateLegacyForce } from './legacyMigration';
 
 describe('legacy force migration',()=>{
