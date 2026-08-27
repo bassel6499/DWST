@@ -4,6 +4,7 @@ import { assessUnit } from './unitAssessment';
 import type { SimulationBaseline } from './simulationBaseline';
 import { resolveEngagements } from './combat';
 import { applyCombatResult } from './combatState';
+import { geographicDistanceMeters, interpolateGeographicPosition } from './geographicMovement';
 
 const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 
@@ -31,12 +32,10 @@ function resolveMovement(unit: UnitState, hours: number, rules: EngineCoefficien
   const distanceFactor = Math.min(1, hours / rules.movementHours);
   const readiness = effectiveReadiness(unit, rules);
   const completion = distanceFactor * (1 - rules.movementReadinessWeight + rules.movementReadinessWeight * readiness) * (1 - rules.movementCommandWeight + rules.movementCommandWeight * unit.commandQuality);
-  const dx = unit.order.destination.lon - unit.position.lon;
-  const dy = unit.order.destination.lat - unit.position.lat;
-  const distance = Math.hypot(dx, dy);
-  if (distance === 0) return undefined;
+  const distance = geographicDistanceMeters(unit.position, unit.order.destination);
+  if (distance < 1e-6) return undefined;
   const ratio = Math.min(1, completion);
-  unit.position = { lon: unit.position.lon + dx * ratio, lat: unit.position.lat + dy * ratio };
+  unit.position = interpolateGeographicPosition(unit.position, unit.order.destination, ratio);
   unit.fatigue = clamp(unit.fatigue + rules.movementFatigue * distanceFactor);
   unit.wear = clamp(unit.wear + rules.movementWear * distanceFactor);
   unit.fuel = clamp(unit.fuel - rules.movementFuel * distanceFactor);
