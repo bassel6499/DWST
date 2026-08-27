@@ -11,7 +11,7 @@ const scenario = (): ScenarioState => ({
       id: 'u1', name: 'Unit', side: 'allied', echelon: 'company', personnel: 100, equipment: 10, ammunition: 1, fuel: 1,
       readiness: 1, training: 1, experience: 1, morale: 1, cohesion: 1, fatigue: 0, wear: 0, logistics: 1, commandQuality: 1, intelligence: 1,
       combatPower: 100, status: 'operational', position: { lon: 0, lat: 0 }, order: { type: 'move', destination: { lon: 1, lat: 0 } },
-      initialPersonnel: 100, cumulativeLosses: 0, history: [],
+      cumulativeLosses: 0, history: [],
     },
   },
 });
