@@ -5,13 +5,10 @@ import { crewRequirement, crewTypeForEquipment } from './crews';
 
 export interface CrewCombatContribution { type:EquipmentPool['type']; usable:number; crewSkill:number; effectiveness:number; }
 
-/**
- * Crew quality is applied only to equipment that has enough ready specialist
- * personnel. Physical equipment without crews remains non-operational.
- */
 export function crewCombatContributions(pools:EquipmentPool[], crews:CrewExperiencePool[]):CrewCombatContribution[] {
  return pools.map(p=>{
   const specialty=crewTypeForEquipment(p.type);
+  if(specialty==='infantry') return {type:p.type,usable:0,crewSkill:0,effectiveness:0};
   const c=crews.find(x=>x.specialty===specialty);
   if(!c) return {type:p.type,usable:0,crewSkill:0,effectiveness:0};
   const usable=Math.min(p.operational,Math.floor(c.ready/crewRequirement[specialty]));
