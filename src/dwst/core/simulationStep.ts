@@ -1,6 +1,6 @@
 import type { ScenarioState, SimulationReport } from './types';
 import { getEraRuleset, type EraRuleset } from './eraRules';
-import { resolveTurn } from './engine';
+import { applyTurn, resolveTurn } from './engine';
 
 export interface SimulationStepResult {
   state: ScenarioState;
@@ -10,9 +10,9 @@ export interface SimulationStepResult {
 /**
  * Pure boundary for one simulation turn.
  *
- * The existing engine resolver remains the compatibility implementation; this
- * API isolates it behind a cloned state so callers receive a new authoritative
- * state and the supplied input is never mutated.
+ * Resolution operates on an isolated clone. The returned state is the
+ * explicit application of that report to the cloned scenario, while the
+ * supplied input remains unchanged.
  */
 export function simulateTurn(state: ScenarioState, rules: EraRuleset = getEraRuleset(state.era)): SimulationStepResult {
   if (!rules) throw new Error('No ruleset selected');
@@ -29,5 +29,6 @@ export function simulateTurn(state: ScenarioState, rules: EraRuleset = getEraRul
   };
 
   const report = resolveTurn(working, rules);
-  return { state: working, report };
+  const nextState = applyTurn(working, report);
+  return { state: nextState, report };
 }
