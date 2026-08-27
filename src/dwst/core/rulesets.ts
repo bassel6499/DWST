@@ -29,6 +29,11 @@ export const WWII_RULESET: CombatRuleset = {
       weather: state.weather,
       surprise,
       artillerySupport: 0,
+      armorSupport: 0,
+      antiArmor: 0,
+      airSupport: 0,
+      maneuver: 0,
+      command: 0,
     });
     return {
       attackerLosses: result.attackerLosses,
