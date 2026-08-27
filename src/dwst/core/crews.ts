@@ -12,7 +12,8 @@ export function crewTypeForEquipment(type:EquipmentType):CrewSpecialty{
 }
 
 export function usableEquipment(pool:EquipmentPool, crews:CrewPool[]):number{
- const specialty=crewTypeForEquipment(pool.type); if(specialty==='infantry') return 0;
+ const specialty=crewTypeForEquipment(pool.type);
+ if(specialty==='infantry') return 0;
  const c=crews.find(x=>x.specialty===specialty); if(!c) return 0;
  return Math.min(pool.operational,Math.floor(c.ready/crewRequirement[specialty]));
 }
@@ -29,5 +30,6 @@ export function trainCrews(unit:UnitState, crews:CrewPool[], order:TrainingOrder
  target.trained+=order.personnel; target.ready+=order.personnel;
  unit.readiness=Math.max(0,unit.readiness-0.03);
  unit.logistics=Math.max(0,unit.logistics-0.01);
+ if(order.to==='infantry') return 0;
  return Math.floor(order.personnel/crewRequirement[order.to]);
 }
