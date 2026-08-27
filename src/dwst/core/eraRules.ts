@@ -1,5 +1,5 @@
 import type { EraId, ScenarioState, UnitState } from './types';
-import { resolveWW2SquareLaw } from './ww2SquareLaw';
+import { resolveWW2Combat } from '../scenarios/ww2/combat';
 
 export type CombatLaw =
   | 'linear'
@@ -98,7 +98,7 @@ const scaffoldNotes = [
 ];
 
 const ww2Combat: CombatResolver = ({ attacker, defender, state, surprise }) => {
-  const result = resolveWW2SquareLaw({
+  const result = resolveWW2Combat({
     attacker,
     defender,
     terrainDefense: state.terrain,
