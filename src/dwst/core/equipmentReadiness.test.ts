@@ -1,4 +1,5 @@
 import { strict as assert } from 'node:assert';
+import { describe, it } from 'vitest';
 import { projectEquipmentPoolReadiness } from './equipmentReadiness';
 
 describe('equipment readiness',()=>{
