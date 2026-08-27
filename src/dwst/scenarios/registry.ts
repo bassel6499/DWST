@@ -1,4 +1,4 @@
-import type { SimulationState } from '../core/simulationState';
+import type { ScenarioState } from '../core/types';
 
 export interface ScenarioDefinition {
   id:string;
@@ -6,7 +6,7 @@ export interface ScenarioDefinition {
   era:string;
   scale:'tactical'|'operational'|'strategic';
   description:string;
-  create():SimulationState;
+  create():ScenarioState;
 }
 
 const scenarios:Record<string,ScenarioDefinition>={};
@@ -18,6 +18,6 @@ export function registerScenario(s:ScenarioDefinition):void {
 
 export function getScenario(id:string):ScenarioDefinition|undefined{return scenarios[id];}
 export function listScenarios():ScenarioDefinition[]{return Object.values(scenarios);}
-export function createScenario(id:string):SimulationState{
+export function createScenario(id:string):ScenarioState{
  const s=getScenario(id); if(!s) throw new Error(`Unknown scenario: ${id}`); return s.create();
 }
