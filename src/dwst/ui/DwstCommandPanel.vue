@@ -3,12 +3,15 @@ import { computed, ref } from 'vue';
 import type { Order, UnitState } from '@/dwst/core/types';
 import { parseNaturalLanguageOrder } from '@/dwst/core/orderProcessor';
 
-const props = defineProps<{ units: UnitState[] }>();
-const emit = defineEmits<{ order: [unitId: string, order: Order]; advance: [] }>();
+const props = defineProps<{ units: UnitState[]; turnHours: number }>();
+const emit = defineEmits<{
+  order: [unitId: string, order: Order];
+  advance: [];
+  'update:turnHours': [turnHours: number];
+}>();
 
 const selectedId = ref(props.units[0]?.id ?? '');
 const commandText = ref('');
-const turnHours = ref(6);
 
 const selected = computed(() => props.units.find(u => u.id === selectedId.value));
 const preview = computed(() => parseNaturalLanguageOrder(commandText.value, selected.value));
@@ -54,7 +57,7 @@ function submitOrder() {
       <button :disabled="!selected || !commandText.trim()" @click="submitOrder">Issue Order</button>
       <label class="turn">
         Turn
-        <select v-model.number="turnHours">
+        <select :value="turnHours" @change="emit('update:turnHours', Number(($event.target as HTMLSelectElement).value))">
           <option :value="1">1h</option><option :value="3">3h</option><option :value="6">6h</option><option :value="12">12h</option><option :value="24">24h</option>
         </select>
       </label>
