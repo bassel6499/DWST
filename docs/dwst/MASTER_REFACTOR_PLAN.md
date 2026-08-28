@@ -12,6 +12,62 @@
 8. **Record new findings.** Every newly confirmed architectural defect or requirement discovered during the audit must be added here before acting on it.
 9. **Era neutrality is mandatory.** WW2, Cold War, modern, future, and hypothetical behavior are selectable rulesets/scenarios; none may define or contaminate the era-agnostic core mechanics.
 10. **Blueprint discipline.** The Architectural Blueprint is a discovery and debugging index only. It maps what exists, what it does, who depends on whom, and known risks. It does not schedule implementation or override phase order. Newly discovered defects found through blueprint tracing are recorded as findings in the active master-plan phases.
+11. **Roadmap separation.** The original long-term DWST roadmap and the current refactor plan are both authoritative, but serve different purposes. The long-term roadmap defines project phases and end-state scope; this document defines the currently active architectural/refactor work. Neither may silently replace the other.
+12. **No duplicate work.** Before opening a new implementation item, reconcile it against completed findings, the long-term roadmap, current source, and prior CI evidence. A completed architectural correction must not be reintroduced as new work merely because its historical roadmap item remains listed.
+
+## Long-term DWST roadmap — preserved project-level roadmap
+
+This section preserves the original project roadmap as the forward-looking structure. It is **not** the detailed implementation checklist for the current refactor. Current refactor findings such as P2-S18–P2-S22 are subordinate implementation/audit steps and do not create a second competing project roadmap.
+
+### Phase 0 — Rules of engagement / architectural principles
+**Status: Established.** Governing architectural constraints, evidence requirements, canonical-state rules, era neutrality, and map-boundary principles are now enforced by this plan.
+
+### Phase 1 — Foundation / canonical architecture
+**Status: Substantially completed through the work leading into the current refactor.** Canonical state, scenario/turn boundaries, resource/personnel/equipment authority, and the core architectural foundation have been established; remaining defects discovered during the Phase 2 audit are tracked below rather than reopening Phase 1 generically.
+
+### Phase 2 — Ruleset architecture + core architecture audit
+**Status: Active / substantially advanced.** This is the current architectural consolidation phase. Detailed findings and verified closures are tracked in the Phase 2 section below. Do not treat this status as meaning the entire DWST project is near completion.
+
+### Phase 3 — WW2 combat ruleset completion
+**Status: Future.** Complete and validate the WW2 ruleset as a selectable era/scenario implementation after the generic core is architecturally clean. WW2 remains an era implementation, never the generic engine model.
+
+### Phase 4 — Playable end-to-end simulation
+**Status: Future.** Build/validate the complete playable simulation loop on the canonical architecture, including scenario setup, turn resolution/application, movement, detection, combat, sustainment, and reporting as required by the product scope.
+
+### Phase 5 — ORBAT Mapper integration / visualization
+**Status: Future / existing integration audited as needed.** Expand the host/map integration without creating a competing DWST map/projection system. ORBAT Mapper remains responsible for map rendering and coordinate conversion at that boundary.
+
+### Phase 6 — Extensible era architecture
+**Status: Future.** Generalize and harden the selectable-ruleset architecture so additional eras can be added without contaminating generic core mechanics.
+
+### Phase 7 — Command / morale / higher-level behavioral systems
+**Status: Future.** Add higher-level command, morale, readiness, behavior, and related simulation systems required by the product scope, while preserving canonical state and era boundaries.
+
+### Phase 8 — Logistics / sustainment expansion
+**Status: Future / partially represented in the current core.** Expand logistics and sustainment into the full project capability defined by the roadmap, without restoring legacy battlefield-state dependencies.
+
+### Phase 9 — Operational visualization / presentation
+**Status: Future.** Complete operational presentation and visualization capabilities at the appropriate host/UI boundary.
+
+### Phase 10 — AAR / after-action reporting
+**Status: Future.** Develop complete after-action reporting and result inspection around canonical simulation outputs.
+
+### Phase 11 — Comprehensive validation / verification
+**Status: Future.** Perform whole-system behavioral, architectural, regression, and evidence-based validation. CI remains a gate, not architectural proof.
+
+### Phase 12 — Multi-resolution simulation
+**Status: Future.** Add multiple simulation resolutions/scales without creating conflicting state authorities or era leakage.
+
+### Phase 13 — Additional eras
+**Status: Future.** Add additional selectable eras/rulesets after the extensible architecture is validated.
+
+### Phase 14 — Final integration / product hardening
+**Status: Future.** Integrate the completed capabilities, remove justified remaining legacy surfaces, harden interfaces, and stabilize the product.
+
+### Phase 15 — Final product state
+**Status: Future end state.** DWST reaches the intended integrated, validated, extensible simulation product state.
+
+**Roadmap interpretation rule:** the statuses above are project-level. Detailed P2 findings below may be completed, split, superseded, or added without changing the existence or order of the long-term phases. New findings must be attached to the appropriate phase rather than creating an accidental second roadmap.
 
 ## Architectural Blueprint / Audit Map
 
@@ -29,7 +85,7 @@ Use it to answer:
 - What known bugs/risks touch it?
 - Where should an investigation start when a problem appears?
 
-**Do not use this section to decide what gets coded next.** The phase sections below remain the authoritative coding roadmap. The blueprint may expose a new defect; when direct evidence confirms that defect, add it to the appropriate phase and continue according to phase priority.
+**Do not use this section to decide what gets coded next.** The long-term roadmap establishes project phase order; the detailed active phase sections establish implementation/audit order. The blueprint may expose a new defect; when direct evidence confirms that defect, add it to the appropriate phase and continue according to phase priority.
 
 ### A. System authority and dependency map
 
@@ -104,16 +160,6 @@ UnitState.position  ← authoritative current physical location
 - Resolved: engine Cartesian interpolation of lon/lat.
 - Resolved: detection's duplicate approximate geographic distance; `detection.ts` now consumes canonical `geographicDistanceMeters()`.
 - Open audit: any remaining duplicate geographic distance helper or antimeridian-unsafe calculation.
-
-**Spatial investigation route:**
-
-1. `spatialPosition.ts`
-2. `spatialInvariant.ts`
-3. `geographicMovement.ts`
-4. direct caller (`engine.ts`, `detection.ts`, etc.)
-5. scenario/import boundary
-6. host map boundary
-7. legacy-pattern search across the repository
 
 ### C. Turn-resolution map
 
@@ -258,40 +304,55 @@ Direct inspection found `engagementModel.ts` and `combatArms.ts` under `src/dwst
 
 **Resolution:** both unused WW2-specific core modules were removed. No generic replacement was created because no active generic contract was proven to require them.
 
-**Status:** Closed. Later accumulated branch CI run `33169899441` passed; architectural closure remains based on direct consumer evidence plus removal of the obsolete source.
+**Status:** Closed. Accumulated branch CI is green at the audited tip.
 
-#### P2-S21 — Legacy geographic-distance duplication and antimeridian-safety audit
+#### P2-S21 — Repository-wide legacy geographic-distance and antimeridian audit
 
-The canonical spatial path is `geographicDistanceMeters(start, destination)` in `geographicMovement.ts`, and `detection.ts` now consumes it. A repository-wide audit is still required to establish whether any other live simulation path maintains duplicate geographic-distance math or performs antimeridian-unsafe longitude calculations.
+**Purpose:** verify that no remaining simulation-path code bypasses the canonical geographic distance/movement semantics through duplicate distance formulas, Cartesian lon/lat calculations, degree-delta approximations, or antimeridian-unsafe longitude arithmetic.
 
-**Required audit targets:**
+**Status:** Active audit. No implementation change is authorized merely by discovery; each confirmed defect must first be recorded with direct source evidence and then explicitly authorized before implementation.
 
-1. duplicate latitude/longitude distance helpers;
-2. degree-delta multiplied by fixed kilometers-per-degree constants;
-3. cosine-scaled longitude approximations;
-4. `Math.hypot(dx, dy)` or equivalent Cartesian calculations applied directly to geographic coordinates;
-5. direct longitude subtraction used as a geographic distance/route proxy without normalization;
-6. duplicate Haversine/great-circle implementations in live simulation paths.
+**Audit classification:** simulation mechanics must use canonical geographic semantics; UI/rendering/projection calculations may legitimately use their own geometry when they are demonstrably outside simulation state/mechanics and remain at the appropriate host/map boundary.
 
-**Evidence rule:** indexed code search may be used to discover candidates but an empty or incomplete index result is not proof of absence. Inspect the repository tree and direct source candidates before declaring the audit clean.
+#### P2-S22 — Master-plan state synchronization / roadmap separation
 
-**Status:** Open audit. No source changes are authorized by this finding alone.
+**Purpose:** prevent the active refactor document from drifting away from the repository or from obscuring the long-term roadmap.
 
-#### P2-S22 — Master-plan state drift prevention
+**Resolution:** this document now explicitly preserves the long-term Phase 0–15 roadmap separately from the detailed Phase 2 refactor plan and states the reconciliation rules between them.
 
-The audit established that the master plan had become stale relative to the actual branch: it still described P2-S18/P2-S20 as CI-pending, P2-S19 as unresolved, and `resolveWW2Engagements()` as surviving after current source had advanced beyond those statements.
+**Status:** Implemented as documentation/process control. Future material refactor changes must update the applicable detailed finding and, where relevant, the project-level phase status rather than silently replacing either layer.
 
-**Required discipline:** whenever a branch change, direct audit result, or CI result materially changes the status of an active master-plan item, update the relevant item before beginning the next implementation action. If status is uncertain, mark it explicitly as uncertain rather than carrying stale completion/pending text forward.
+### Current Phase 2 execution order
 
-**Status:** Active process requirement; this plan update records the first reconciliation.
+1. **P2-S21 audit:** complete the repository-wide geographic-distance/antimeridian investigation using direct source evidence.
+2. Record every confirmed spatial defect before implementation; do not bundle unrelated fixes into the same item.
+3. For each confirmed defect, identify all required consumers and the canonical replacement path.
+4. Only after explicit authorization, implement the minimum correction and focused regression coverage.
+5. Run CI as a gate and inspect the resulting source/architecture independently of CI.
+6. Update this plan immediately with the actual result before opening the next implementation item.
+7. After P2-S21 is closed, perform the remaining whole-project Phase 2 architecture audit for duplicate state authority, coordinate systems, era leakage, mutation boundaries, hidden compatibility consumers, and map-boundary violations.
+8. Close Phase 2 only when its confirmed findings are resolved or explicitly carried into the appropriate later project phase with a documented reason.
+9. Proceed to the next long-term roadmap phase only after Phase 2 closure is documented.
 
-#### P2-S1 through P2-S17
+## Findings log
 
-**Status:** Previous resolved findings remain as recorded in the findings log and completed/verified sections above. Closed items are retained for traceability rather than deleted from the plan.
-
-### Next investigation / implementation order
-
-1. **P2-S21:** continue the direct-source repository-wide geographic-distance and antimeridian-safety audit using the Spatial audit checklist. Do not treat indexed search alone as proof of absence.
-2. For every confirmed live duplicate or unsafe calculation found during P2-S21, add the concrete finding to this phase before implementation and keep the canonical primitive as the presumed replacement only after consumer semantics are directly checked.
-3. **P2-S22 discipline:** reconcile the master-plan status immediately after any material branch/CI/audit state change before beginning the next implementation action.
-4. After P2-S21 is complete, re-run the Phase 2 compatibility/legacy map against actual current source before declaring Phase 2 architecturally complete.
+- 2026-08-27: Direct inspection confirmed canonical map path uses geographic `WorldPosition`.
+- 2026-08-27: Direct inspection confirmed legacy battlefield movement/detection used `x/y`.
+- 2026-08-27: Direct inspection confirmed canonical `resolveTurn()` and legacy `resolveUnifiedTurn()` had different state/mutation contracts.
+- 2026-08-27: Verified ORBAT Mapper `MapAdapter` exposes geographic/map coordinate conversion; this is the host map boundary to reuse.
+- 2026-08-27: Confirmed DWST has no verified semantic conversion from legacy battlefield `x/y` to `WorldPosition`; no such conversion is to be invented.
+- 2026-08-27: Confirmed duplicate `defineProps` declaration in `DwstMapOverlay.vue`; removed and validated by green CI run `33100195482`.
+- 2026-08-27: Corrected an earlier detection finding: `core/combat.ts` already invokes canonical `detectContacts(state)` during engagement resolution.
+- 2026-08-27: Confirmed WW2-specific turn orchestration remained in `src/dwst/core/ww2.ts`; active demo caller migrated to generic `simulateTurn()` and validated by green CI run `33106939476`.
+- 2026-08-27: Confirmed duplicate WW2 square-law implementations across core and scenario layers; consolidated into the selectable WW2 scenario layer and validated by green CI runs `33107940693` and `33107899018`.
+- 2026-08-27: Confirmed standalone `src/dwst/core/battlefield.ts` was an independent x/y battlefield state implementation; deleted it without replacement.
+- 2026-08-27: Direct inspection confirmed `CanonicalState` is resource/personnel/equipment authority only while `UnitState.position: WorldPosition` is canonical physical position.
+- 2026-08-27: Direct inspection confirmed `simulationState.ts` and a compatibility detector still depended on deleted `BattlefieldState`; both obsolete paths were removed.
+- 2026-08-27: CI failures exposed the remaining dependency tail after battlefield removal: resolver, logistics, scenario registry, and Ardennes scenario; all were migrated/removed without restoring battlefield state, and the final two runs of the cleanup sequence were green.
+- 2026-08-27: Direct inspection confirmed the generic engine directly interpolates geographic longitude/latitude as Cartesian values; recorded as P2-S17 before correction.
+- 2026-08-27: Direct inspection confirmed the host map/import-export architecture already provides GeoJSON geographic handling and ORBAT Mapper owns map conversion, so the engine correction must remain a small core geographic operation rather than a second map/projection system.
+- 2026-08-28: P2-S18 closed after canonical geographic distance adoption and green accumulated branch CI.
+- 2026-08-28: P2-S19 closed after implementing the minimal era-owned detection policy boundary and green accumulated branch CI.
+- 2026-08-28: P2-S20 closed after direct audit/removal of unused WW2-specific core modules and green accumulated branch CI.
+- 2026-08-28: P2-S21 opened for repository-wide legacy geographic-distance and antimeridian audit.
+- 2026-08-28: P2-S22 established roadmap/refactor-plan separation and synchronization rules to prevent future plan drift or duplicate work.
