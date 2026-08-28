@@ -68,8 +68,3 @@ export function resolveEngagements(state: ScenarioState): Engagement[] {
 
   return engagements;
 }
-
-/** Backward-compatible WWII entry point. */
-export function resolveWW2Engagements(state: ScenarioState): Engagement[] {
-  return resolveEngagements({ ...state, era: 'ww2' });
-}
