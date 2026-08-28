@@ -35,6 +35,28 @@ export interface UnitAssessmentPolicy {
   disorganizedCondition: number;
 }
 
+export type DetectionSensorType = 'visual' | 'recon' | 'airRecon' | 'signals';
+
+/**
+ * Era-owned detection parameters consumed by the generic contact pipeline.
+ * The pipeline itself remains core-owned so eras do not duplicate contact
+ * bookkeeping or geographic distance logic.
+ */
+export interface DetectionPolicy {
+  baseUnaidedRangeKm: number;
+  sensorRangeModifiers: Record<DetectionSensorType, number>;
+  intelligenceFloor: number;
+  intelligenceWeight: number;
+  readinessFloor: number;
+  readinessWeight: number;
+  weatherFloor: number;
+  weatherWeight: number;
+  terrainFloor: number;
+  terrainWeight: number;
+  formationConfidenceThreshold: number;
+  unitConfidenceThreshold: number;
+}
+
 export interface CombatResult {
   attackerLosses: number;
   defenderLosses: number;
@@ -62,6 +84,7 @@ export interface EraRuleset {
   logisticsEnabled: boolean;
   engine: EngineCoefficients;
   unitAssessment: UnitAssessmentPolicy;
+  detection: DetectionPolicy;
   /** Combat implementation owned by this era. Absent means the era is not runnable. */
   resolveCombat?: CombatResolver;
   notes: string[];
@@ -85,6 +108,26 @@ export const DEFAULT_ENGINE: Readonly<EngineCoefficients> = {
   cohesionEffect: 0.25,
   moraleEffect: 0.25,
   commandEffect: 0.2,
+};
+
+export const DEFAULT_DETECTION_POLICY: Readonly<DetectionPolicy> = {
+  baseUnaidedRangeKm: 12,
+  sensorRangeModifiers: {
+    visual: 1,
+    recon: 1.25,
+    airRecon: 1.7,
+    signals: 1.1,
+  },
+  intelligenceFloor: 0.65,
+  intelligenceWeight: 0.35,
+  readinessFloor: 0.7,
+  readinessWeight: 0.3,
+  weatherFloor: 0.65,
+  weatherWeight: 0.35,
+  terrainFloor: 0.75,
+  terrainWeight: 0.25,
+  formationConfidenceThreshold: 0.85,
+  unitConfidenceThreshold: 0.55,
 };
 
 const DEFAULT_UNIT_ASSESSMENT: UnitAssessmentPolicy = {
@@ -138,6 +181,10 @@ const base = (
   logisticsEnabled: true,
   engine: { ...DEFAULT_ENGINE },
   unitAssessment: { ...DEFAULT_UNIT_ASSESSMENT },
+  detection: {
+    ...DEFAULT_DETECTION_POLICY,
+    sensorRangeModifiers: { ...DEFAULT_DETECTION_POLICY.sensorRangeModifiers },
+  },
   notes: [...scaffoldNotes],
 });
 
@@ -208,6 +255,39 @@ export function validateEraRuleset(r: EraRuleset): string[] {
     }
     if (assessment.destroyedPersonnel > assessment.disorganizedPersonnel) {
       errors.push('unitAssessment.destroyedPersonnel must not exceed disorganizedPersonnel');
+    }
+  }
+
+  const detection = r.detection;
+  if (!detection || !Number.isFinite(detection.baseUnaidedRangeKm) || detection.baseUnaidedRangeKm < 0) {
+    errors.push('detection.baseUnaidedRangeKm must be a non-negative finite number');
+  } else {
+    const numericDetectionFields = [
+      'intelligenceFloor',
+      'intelligenceWeight',
+      'readinessFloor',
+      'readinessWeight',
+      'weatherFloor',
+      'weatherWeight',
+      'terrainFloor',
+      'terrainWeight',
+      'formationConfidenceThreshold',
+      'unitConfidenceThreshold',
+    ] as const;
+    for (const key of numericDetectionFields) {
+      const value = detection[key];
+      if (!Number.isFinite(value) || value < 0 || value > 1) {
+        errors.push(`detection.${key} must be between 0 and 1`);
+      }
+    }
+    for (const sensorType of Object.keys(DEFAULT_DETECTION_POLICY.sensorRangeModifiers) as DetectionSensorType[]) {
+      const value = detection.sensorRangeModifiers[sensorType];
+      if (!Number.isFinite(value) || value < 0) {
+        errors.push(`detection.sensorRangeModifiers.${sensorType} must be a non-negative finite number`);
+      }
+    }
+    if (detection.formationConfidenceThreshold < detection.unitConfidenceThreshold) {
+      errors.push('detection.formationConfidenceThreshold must not be below unitConfidenceThreshold');
     }
   }
 
