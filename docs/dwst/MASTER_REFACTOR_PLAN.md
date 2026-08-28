@@ -49,7 +49,8 @@ DWST generic core
           │ selects policy/mechanics through
           ▼
 Era ruleset layer
-  owns: selectable era-specific coefficients and combat/assessment mechanics
+  owns: selectable era-specific coefficients and combat/assessment/detection
+        policy
           │
           ▼
 Simulation report / resulting UnitState
@@ -101,7 +102,7 @@ UnitState.position  ← authoritative current physical location
 
 - Resolved: legacy x/y battlefield authority.
 - Resolved: engine Cartesian interpolation of lon/lat.
-- Implemented, CI status to record: detection's duplicate approximate geographic distance.
+- Resolved: detection's duplicate approximate geographic distance; `detection.ts` now consumes canonical `geographicDistanceMeters()`.
 - Open audit: any remaining duplicate geographic distance helper or antimeridian-unsafe calculation.
 
 **Spatial investigation route:**
@@ -151,12 +152,12 @@ getEraRuleset(era)
       ├── engine coefficients
       ├── resolveCombat
       ├── unit assessment policy
-      └── possible future detection policy
+      └── detection policy
 ```
 
-**Current rule:** generic orchestration stays core; historical/era-specific mechanics stay selectable.
+**Current rule:** generic orchestration stays core; historical/era-specific mechanics and coefficients stay selectable.
 
-**Known open question:** P2-S19 — whether detection needs a minimal era-owned policy boundary.
+**Current implementation:** one canonical detection pipeline remains in `detection.ts`; `DetectionPolicy` is selected through the era ruleset and passed into that pipeline rather than duplicating detection by era.
 
 ### E. Canonical records and derived projections
 
@@ -193,7 +194,9 @@ Compatibility entry point
              delete
 ```
 
-**Known active audits:** `resolveWW2Engagements()` compatibility wrapper; detection policy boundary.
+**Known active audit:** repository-wide legacy geographic-distance duplication and antimeridian safety.
+
+**Resolved compatibility finding:** direct current-source inspection found no surviving `resolveWW2Engagements()` wrapper in `src/dwst/core/combat.ts`; remove it from the active-audit list unless a future source revision reintroduces it.
 
 ### G. Debugging entry guide
 
@@ -201,7 +204,7 @@ Compatibility entry point
 | --- | --- | --- |
 | Current location wrong | `spatialPosition.ts` | invariant → geographic operations → scenario input → map boundary |
 | Movement wrong | `geographicMovement.ts` | `engine.ts` → movement tests |
-| Contact/range wrong | `detection.ts` | geographic distance → ruleset policy if present → `combat.ts` |
+| Contact/range wrong | `detection.ts` | geographic distance → selected detection policy → `combat.ts` |
 | Combat wrong | `combat.ts` | selected `EraRuleset` → scenario combat module |
 | Era leakage | `eraRules.ts` | core imports/callers → scenario modules |
 | Unexpected mutation | `resolveTurn()` | `applyTurn()` → mutation tests |
@@ -230,23 +233,24 @@ Compatibility entry point
 - P2-S17 canonical geographic movement operations were added and CI validated.
 - P2-S7 executable core spatial invariants were added and CI validated.
 - The obsolete `src/dwst/core/ww2.ts` compatibility facade was removed after direct commit/diff inspection established that it contained only forwarding exports and the deprecated `runWW2Turn()` wrapper; its WW2 combat functionality was already owned by the selectable WW2 scenario layer and turn orchestration by the generic simulation pipeline. CI run `33117957851` passed type-check and unit tests after the subsequent WW2 fixture correction.
-- P2-S20 direct source audit found `engagementModel.ts` and `combatArms.ts` to be unused core modules carrying WW2/industrial-era square-law assumptions. Both were removed; CI validation is pending.
+- P2-S18 detection geographic-distance refactor was implemented and focused regression-tested. The later green branch workflow run `33169899441` at commit `5f79471c8688cf738c3dcf6c72e1ef3dec6561b9` validated the accumulated branch state, closing the CI gate for this change without treating CI as architectural proof.
+- P2-S19 minimal era-owned detection-policy boundary was implemented without duplicating the contact pipeline: `DetectionPolicy` is supplied through the selected era ruleset and consumed by canonical `detectContacts(...)`. The focused boundary tests were added in commit `5f79471c8688cf738c3dcf6c72e1ef3dec6561b9`; workflow run `33169899441` passed on that tip.
+- P2-S20 direct source audit found `engagementModel.ts` and `combatArms.ts` to be unused core modules carrying WW2/industrial-era square-law assumptions. Both were removed. The later green branch workflow run `33169899441` at the current audited tip closes the CI gate for the accumulated branch state; the deletion remains architecturally justified by direct consumer evidence, not CI alone.
+- Direct current-source inspection found no surviving `resolveWW2Engagements()` compatibility wrapper in `src/dwst/core/combat.ts`; it is therefore no longer an active deletion audit item on the current branch.
 
 ### Confirmed remaining architecture problems
 
 #### P2-S18 — Detection duplicated legacy approximate geographic distance math
 
-`detection.ts` still used a latitude/longitude approximation based on degree deltas, a fixed kilometers-per-degree constant, cosine scaling, and `Math.hypot`.
+**Resolution:** implemented. `detection.ts` consumes canonical `geographicDistanceMeters()` rather than maintaining a latitude/longitude approximation.
 
-**Required resolution:** detection must consume the canonical `geographicDistanceMeters()` operation rather than maintain its own geographic approximation.
+**Status:** Closed. Focused regression coverage exists and later branch CI run `33169899441` passed on the audited accumulated state.
 
-**Status:** Implemented; focused regression tests added. Pending/record CI result before closure.
+#### P2-S19 — Detection policy boundary for selectable eras
 
-#### P2-S19 — Detection policy is universal core logic despite selectable eras
+**Resolution:** implemented. The generic core retains one canonical `detectContacts(...)` loop. A minimal `DetectionPolicy` boundary is owned by the selected era ruleset and parameterizes range, sensor, intelligence, readiness, weather, terrain, and confidence behavior without duplicating detection by era.
 
-The generic combat pipeline calls canonical `detectContacts(state)` before selected era combat, while `EraRuleset` currently has no detection policy hook.
-
-**Status:** Confirmed architecture audit item. Do not duplicate the entire detection loop per era. First determine the smallest ruleset-owned policy boundary supported by direct evidence (for example range/confidence/environment modifiers) while retaining one canonical contact pipeline.
+**Status:** Closed for the currently evidenced boundary. Future era-specific requirements that cannot be represented by the policy must be added as a new finding before implementation.
 
 #### P2-S20 — WW2-specific mechanics remained in generic core after facade removal
 
@@ -254,7 +258,32 @@ Direct inspection found `engagementModel.ts` and `combatArms.ts` under `src/dwst
 
 **Resolution:** both unused WW2-specific core modules were removed. No generic replacement was created because no active generic contract was proven to require them.
 
-**Status:** Implemented; pending CI validation.
+**Status:** Closed. Later accumulated branch CI run `33169899441` passed; architectural closure remains based on direct consumer evidence plus removal of the obsolete source.
+
+#### P2-S21 — Legacy geographic-distance duplication and antimeridian-safety audit
+
+The canonical spatial path is `geographicDistanceMeters(start, destination)` in `geographicMovement.ts`, and `detection.ts` now consumes it. A repository-wide audit is still required to establish whether any other live simulation path maintains duplicate geographic-distance math or performs antimeridian-unsafe longitude calculations.
+
+**Required audit targets:**
+
+1. duplicate latitude/longitude distance helpers;
+2. degree-delta multiplied by fixed kilometers-per-degree constants;
+3. cosine-scaled longitude approximations;
+4. `Math.hypot(dx, dy)` or equivalent Cartesian calculations applied directly to geographic coordinates;
+5. direct longitude subtraction used as a geographic distance/route proxy without normalization;
+6. duplicate Haversine/great-circle implementations in live simulation paths.
+
+**Evidence rule:** indexed code search may be used to discover candidates but an empty or incomplete index result is not proof of absence. Inspect the repository tree and direct source candidates before declaring the audit clean.
+
+**Status:** Open audit. No source changes are authorized by this finding alone.
+
+#### P2-S22 — Master-plan state drift prevention
+
+The audit established that the master plan had become stale relative to the actual branch: it still described P2-S18/P2-S20 as CI-pending, P2-S19 as unresolved, and `resolveWW2Engagements()` as surviving after current source had advanced beyond those statements.
+
+**Required discipline:** whenever a branch change, direct audit result, or CI result materially changes the status of an active master-plan item, update the relevant item before beginning the next implementation action. If status is uncertain, mark it explicitly as uncertain rather than carrying stale completion/pending text forward.
+
+**Status:** Active process requirement; this plan update records the first reconciliation.
 
 #### P2-S1 through P2-S17
 
@@ -262,8 +291,7 @@ Direct inspection found `engagementModel.ts` and `combatArms.ts` under `src/dwst
 
 ### Next investigation / implementation order
 
-1. Record CI results for P2-S18 and P2-S20; close only if green.
-2. Continue direct-source legacy geographic-distance audit using the Spatial audit checklist; do not treat indexed search alone as proof of absence.
-3. Inspect and resolve any remaining geographic-distance duplication or antimeridian-unsafe calculation found by direct evidence.
-4. Audit the surviving `resolveWW2Engagements()` compatibility entry point in `combat.ts` for actual consumers; do not delete without direct consumer proof.
-5. Determine whether P2-S19 needs a ruleset-owned detection policy/interface, and if so define the smallest boundary rather than era-duplicating the pipeline.
+1. **P2-S21:** continue the direct-source repository-wide geographic-distance and antimeridian-safety audit using the Spatial audit checklist. Do not treat indexed search alone as proof of absence.
+2. For every confirmed live duplicate or unsafe calculation found during P2-S21, add the concrete finding to this phase before implementation and keep the canonical primitive as the presumed replacement only after consumer semantics are directly checked.
+3. **P2-S22 discipline:** reconcile the master-plan status immediately after any material branch/CI/audit state change before beginning the next implementation action.
+4. After P2-S21 is complete, re-run the Phase 2 compatibility/legacy map against actual current source before declaring Phase 2 architecturally complete.
