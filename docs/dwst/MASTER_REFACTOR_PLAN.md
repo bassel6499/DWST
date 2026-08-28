@@ -161,7 +161,8 @@ UnitState.position  ← authoritative current physical location
 - Resolved: legacy x/y battlefield authority.
 - Resolved: engine Cartesian interpolation of lon/lat.
 - Resolved: detection's duplicate approximate geographic distance; `detection.ts` now consumes canonical `geographicDistanceMeters()`.
-- Open audit: any remaining duplicate geographic distance helper or antimeridian-unsafe calculation.
+- Resolved: legacy duplicate `src/dwst/core/movement.ts`; the standalone approximate geographic movement implementation was removed after direct consumer/boundary inspection established it was redundant with the active canonical `engine.ts` + `geographicMovement.ts` path. CI for the deletion commit was confirmed green by the user.
+- Resolved for the currently evidenced repository state: the final P2-S21 sweep found no remaining duplicate characteristic geographic-distance implementation or antimeridian-unsafe simulation movement calculation after the legacy movement module removal.
 
 ### C. Turn-resolution map
 
@@ -285,6 +286,7 @@ Compatibility entry point
 - P2-S19 minimal era-owned detection-policy boundary was implemented without duplicating the contact pipeline: `DetectionPolicy` is supplied through the selected era ruleset and consumed by canonical `detectContacts(...)`. The focused boundary tests were added in commit `5f79471c8688cf738c3dcf6c72e1ef3dec6561b9`; workflow run `33169899441` passed on that tip.
 - P2-S20 direct source audit found `engagementModel.ts` and `combatArms.ts` to be unused core modules carrying WW2/industrial-era square-law assumptions. Both were removed. The later green branch workflow run `33169899441` at the current audited tip closes the CI gate for the accumulated branch state; the deletion remains architecturally justified by direct consumer evidence, not CI alone.
 - Direct current-source inspection found no surviving `resolveWW2Engagements()` compatibility wrapper in `src/dwst/core/combat.ts`; it is therefore no longer an active deletion audit item on the current branch.
+- P2-S21 legacy duplicate movement implementation was removed after direct inspection of the current repository tree, core consumers, application/UI path, package configuration, and canonical engine/geographic movement sources established the standalone `src/dwst/core/movement.ts` was redundant and had no required consumer. The deletion commit `e372d8fc9bc9b330ec32830c2d3b3f5a5e5eddb5` was subsequently validated by the user's manual inspection as **green CI** under the run named `remove legacy duplicate movement implementation`.
 
 ### Confirmed remaining architecture problems
 
@@ -312,11 +314,9 @@ Direct inspection found `engagementModel.ts` and `combatArms.ts` under `src/dwst
 
 **Purpose:** verify that no remaining simulation-path code bypasses the canonical geographic distance/movement semantics through duplicate distance formulas, Cartesian lon/lat calculations, degree-delta approximations, or antimeridian-unsafe longitude arithmetic.
 
-**Status:** Active audit. No implementation change is authorized merely by discovery; each confirmed defect must first be recorded with direct source evidence and then explicitly authorized before implementation.
+**Resolution:** direct repository-tree and source inspection identified the standalone legacy `src/dwst/core/movement.ts` as a redundant duplicate geographic movement implementation. Its consumers and application/package boundaries were audited directly; no required consumer was found. With explicit authorization, the file was deleted in commit `e372d8fc9bc9b330ec32830c2d3b3f5a5e5eddb5`. The resulting source was directly re-inspected: `engine.ts` continues to use canonical `geographicDistanceMeters()` and `interpolateGeographicPosition()`, and `detection.ts` continues to use canonical geographic distance. The final sweep found no remaining characteristic remnants of the removed approximate implementation. The user manually confirmed the deletion CI run `remove legacy duplicate movement implementation` was green.
 
-**Audit classification:** simulation mechanics must use canonical geographic semantics; UI/rendering/projection calculations may legitimately use their own geometry when they are demonstrably outside simulation state/mechanics and remain at the appropriate host/map boundary.
-
-**Evidence rule:** repository/code search results are not sufficient to close this audit. The audit must be based on direct inspection of the current branch tree and relevant source files. Search may assist candidate discovery only.
+**Status:** Closed for the currently evidenced repository state. Future source revisions that introduce another duplicate distance/movement implementation or antimeridian-unsafe simulation calculation must be recorded as a new finding before implementation.
 
 #### P2-S22 — Master-plan state synchronization / roadmap separation
 
@@ -361,3 +361,6 @@ Direct inspection found `engagementModel.ts` and `combatArms.ts` under `src/dwst
 - 2026-08-28: P2-S21 opened for repository-wide legacy geographic-distance and antimeridian audit.
 - 2026-08-28: P2-S22 established roadmap/refactor-plan separation and synchronization rules to prevent future plan drift or duplicate work.
 - 2026-08-28: Added explicit repository-source verification rules after GitHub code-search returned false negatives for symbols/files directly confirmed to exist in the current branch.
+- 2026-08-28: P2-S21 confirmed `src/dwst/core/movement.ts` was a legacy duplicate of the canonical geographic movement path; direct application/package/export/consumer inspection found no required dependency, so deletion was authorized and performed in commit `e372d8fc9bc9b330ec32830c2d3b3f5a5e5eddb5`.
+- 2026-08-28: Post-deletion direct inspection confirmed `movement.ts` was absent, `engine.ts` still used canonical geographic operations, and the final spatial sweep found no remaining characteristic remnants of the removed approximate implementation. The user manually confirmed the deletion CI run `remove legacy duplicate movement implementation` was green.
+- 2026-08-28: P2-S21 closed for the currently evidenced repository state; future duplicate geographic-distance or antimeridian-unsafe simulation logic must be recorded as a new finding before implementation.
