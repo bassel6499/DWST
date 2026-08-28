@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { detectContacts } from './detection';
+import { DEFAULT_DETECTION_POLICY } from './eraRules';
 import type { ScenarioState, UnitState } from './types';
 
 function unit(id: string, side: UnitState['side'], lon: number, lat: number): UnitState {
@@ -75,5 +76,24 @@ describe('canonical geographic detection', () => {
       unit('a', 'allied', 35.5, 33.9),
       unit('b', 'allied', 35.6, 33.9),
     ]))).toEqual([]);
+  });
+
+  it('keeps the contact pipeline generic while allowing era-owned range policy', () => {
+    const scenario = state([
+      unit('observer', 'allied', 0, 0),
+      unit('target', 'enemy', 0.1, 0),
+    ]);
+    const shortRangePolicy = {
+      ...DEFAULT_DETECTION_POLICY,
+      baseUnaidedRangeKm: 1,
+      sensorRangeModifiers: { ...DEFAULT_DETECTION_POLICY.sensorRangeModifiers },
+    };
+
+    const defaultContact = detectContacts(scenario).find((c) => c.observerId === 'observer');
+    const shortRangeContact = detectContacts(scenario, [], shortRangePolicy).find((c) => c.observerId === 'observer');
+
+    expect(defaultContact?.detected).toBe(true);
+    expect(shortRangeContact?.detected).toBe(false);
+    expect(defaultContact?.distanceKm).toBeCloseTo(shortRangeContact?.distanceKm ?? 0, 9);
   });
 });
