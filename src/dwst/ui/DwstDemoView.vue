@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import DwstCommandPanel from './DwstCommandPanel.vue';
 import { parseNaturalLanguageOrder } from '@/dwst/core/orderProcessor';
-import { simulateTurn } from '@/dwst/core/simulationStep';
+import { advanceSimulation, startSimulation } from '@/dwst/core/simulationSession';
 import type { Order, ScenarioState, UnitState } from '@/dwst/core/types';
 
 const makeUnit = (id: string, name: string, side: UnitState['side'], lon: number, lat: number): UnitState => ({
@@ -12,7 +12,7 @@ const makeUnit = (id: string, name: string, side: UnitState['side'], lon: number
   status: 'operational', position: { lon, lat }, cumulativeLosses: 0, history: [],
 });
 
-const state = ref<ScenarioState>({
+const session = ref(startSimulation({
   id: 'ardennes-1944-demo', name: 'Ardennes 1944 — DWST Prototype', era: 'ww2', scale: 'operational', turnHours: 6,
   elapsedHours: 0, weather: 1, terrain: 1, intelLevel: 0.7,
   units: {
@@ -21,8 +21,9 @@ const state = ref<ScenarioState>({
     'us-101': makeUnit('us-101', '101st Airborne Division', 'allied', 5.72, 50.0),
     'us-4arm': makeUnit('us-4arm', '4th Armored Division', 'allied', 5.55, 49.85),
   }, events: [],
-});
+}));
 
+const state = computed(() => session.value.state);
 const units = computed(() => Object.values(state.value.units));
 const report = ref<string[]>(['Scenario initialized. Issue an order to begin.']);
 const currentTurn = computed(() => Math.floor(state.value.elapsedHours / state.value.turnHours) + 1);
@@ -30,13 +31,22 @@ const currentTurn = computed(() => Math.floor(state.value.elapsedHours / state.v
 function issueOrder(unitId: string, order: Order) {
   const unit = state.value.units[unitId];
   if (!unit) return;
-  unit.order = order;
+  session.value = {
+    ...session.value,
+    state: {
+      ...state.value,
+      units: {
+        ...state.value.units,
+        [unitId]: { ...unit, order },
+      },
+    },
+  };
   report.value.unshift(`${unit.name}: ${order.type.toUpperCase()}${order.objective ? ` → ${order.objective}` : ''} (${order.posture ?? 'normal'}).`);
 }
 
 function advance() {
-  const result = simulateTurn(state.value);
-  state.value = result.state;
+  const result = advanceSimulation(session.value);
+  session.value = result.session;
   const combatEvents = result.report.events.filter(event => event.phase === 'combat');
   report.value.unshift(
     `Turn ${result.report.turn} complete. ${result.report.elapsedHours} hours elapsed. ` +
