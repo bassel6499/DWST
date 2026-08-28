@@ -193,7 +193,7 @@ Compatibility entry point
              delete
 ```
 
-**Known active audits:** `resolveWW2Engagements()` compatibility wrapper; WW2 mechanics still present in generic `core` modules.
+**Known active audits:** `resolveWW2Engagements()` compatibility wrapper; detection policy boundary.
 
 ### G. Debugging entry guide
 
@@ -230,6 +230,7 @@ Compatibility entry point
 - P2-S17 canonical geographic movement operations were added and CI validated.
 - P2-S7 executable core spatial invariants were added and CI validated.
 - The obsolete `src/dwst/core/ww2.ts` compatibility facade was removed after direct commit/diff inspection established that it contained only forwarding exports and the deprecated `runWW2Turn()` wrapper; its WW2 combat functionality was already owned by the selectable WW2 scenario layer and turn orchestration by the generic simulation pipeline. CI run `33117957851` passed type-check and unit tests after the subsequent WW2 fixture correction.
+- P2-S20 direct source audit found `engagementModel.ts` and `combatArms.ts` to be unused core modules carrying WW2/industrial-era square-law assumptions. Both were removed; CI validation is pending.
 
 ### Confirmed remaining architecture problems
 
@@ -247,20 +248,13 @@ The generic combat pipeline calls canonical `detectContacts(state)` before selec
 
 **Status:** Confirmed architecture audit item. Do not duplicate the entire detection loop per era. First determine the smallest ruleset-owned policy boundary supported by direct evidence (for example range/confidence/environment modifiers) while retaining one canonical contact pipeline.
 
-#### P2-S20 — WW2-specific mechanics remain in generic core after facade removal
+#### P2-S20 — WW2-specific mechanics remained in generic core after facade removal
 
-Direct inspection found `engagementModel.ts` and `combatArms.ts` under `src/dwst/core/` still encode WW2/industrial-era square-law formation/combat assumptions, despite era neutrality requiring WW2 to remain selectable rather than define core mechanics.
+Direct inspection found `engagementModel.ts` and `combatArms.ts` under `src/dwst/core/` encoded WW2/industrial-era square-law formation/combat assumptions. Direct repository searches for their exported functions and module names returned no indexed consumers, and direct source inspection showed their mechanics were not part of the active selectable WW2 combat module.
 
-**Required audit before modification:**
+**Resolution:** both unused WW2-specific core modules were removed. No generic replacement was created because no active generic contract was proven to require them.
 
-1. inspect both modules completely;
-2. trace every direct source consumer, export consumer, test consumer, and scenario consumer;
-3. classify each exported concept as genuinely era-neutral or WW2-specific;
-4. preserve only genuinely generic contracts in core;
-5. migrate WW2-specific mechanics to the selectable WW2 scenario/ruleset layer;
-6. remove redundant compatibility entry points only after direct consumer proof and CI validation.
-
-**Status:** Confirmed by direct source inspection; implementation not started.
+**Status:** Implemented; pending CI validation.
 
 #### P2-S1 through P2-S17
 
@@ -268,9 +262,8 @@ Direct inspection found `engagementModel.ts` and `combatArms.ts` under `src/dwst
 
 ### Next investigation / implementation order
 
-1. Record CI result for P2-S18; close only if green.
+1. Record CI results for P2-S18 and P2-S20; close only if green.
 2. Continue direct-source legacy geographic-distance audit using the Spatial audit checklist; do not treat indexed search alone as proof of absence.
 3. Inspect and resolve any remaining geographic-distance duplication or antimeridian-unsafe calculation found by direct evidence.
 4. Audit the surviving `resolveWW2Engagements()` compatibility entry point in `combat.ts` for actual consumers; do not delete without direct consumer proof.
-5. Audit P2-S20 by tracing `engagementModel.ts` and `combatArms.ts` before moving or deleting anything.
-6. Determine whether P2-S19 needs a ruleset-owned detection policy/interface, and if so define the smallest boundary rather than era-duplicating the pipeline.
+5. Determine whether P2-S19 needs a ruleset-owned detection policy/interface, and if so define the smallest boundary rather than era-duplicating the pipeline.
