@@ -193,7 +193,7 @@ Compatibility entry point
              delete
 ```
 
-**Known active audit:** surviving `resolveWW2Engagements()` compatibility entry point in `combat.ts`.
+**Known active audits:** `resolveWW2Engagements()` compatibility wrapper; WW2 mechanics still present in generic `core` modules.
 
 ### G. Debugging entry guide
 
@@ -247,6 +247,21 @@ The generic combat pipeline calls canonical `detectContacts(state)` before selec
 
 **Status:** Confirmed architecture audit item. Do not duplicate the entire detection loop per era. First determine the smallest ruleset-owned policy boundary supported by direct evidence (for example range/confidence/environment modifiers) while retaining one canonical contact pipeline.
 
+#### P2-S20 — WW2-specific mechanics remain in generic core after facade removal
+
+Direct inspection found `engagementModel.ts` and `combatArms.ts` under `src/dwst/core/` still encode WW2/industrial-era square-law formation/combat assumptions, despite era neutrality requiring WW2 to remain selectable rather than define core mechanics.
+
+**Required audit before modification:**
+
+1. inspect both modules completely;
+2. trace every direct source consumer, export consumer, test consumer, and scenario consumer;
+3. classify each exported concept as genuinely era-neutral or WW2-specific;
+4. preserve only genuinely generic contracts in core;
+5. migrate WW2-specific mechanics to the selectable WW2 scenario/ruleset layer;
+6. remove redundant compatibility entry points only after direct consumer proof and CI validation.
+
+**Status:** Confirmed by direct source inspection; implementation not started.
+
 #### P2-S1 through P2-S17
 
 **Status:** Previous resolved findings remain as recorded in the findings log and completed/verified sections above. Closed items are retained for traceability rather than deleted from the plan.
@@ -257,4 +272,5 @@ The generic combat pipeline calls canonical `detectContacts(state)` before selec
 2. Continue direct-source legacy geographic-distance audit using the Spatial audit checklist; do not treat indexed search alone as proof of absence.
 3. Inspect and resolve any remaining geographic-distance duplication or antimeridian-unsafe calculation found by direct evidence.
 4. Audit the surviving `resolveWW2Engagements()` compatibility entry point in `combat.ts` for actual consumers; do not delete without direct consumer proof.
-5. Determine whether P2-S19 needs a ruleset-owned detection policy/interface, and if so define the smallest boundary rather than era-duplicating the pipeline.
+5. Audit P2-S20 by tracing `engagementModel.ts` and `combatArms.ts` before moving or deleting anything.
+6. Determine whether P2-S19 needs a ruleset-owned detection policy/interface, and if so define the smallest boundary rather than era-duplicating the pipeline.
