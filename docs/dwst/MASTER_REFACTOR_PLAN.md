@@ -11,92 +11,108 @@
 7. **Delete only after proving zero required consumers.** Legacy code remains until its live dependencies are migrated and CI proves the replacement.
 8. **Record new findings.** Every newly confirmed architectural defect or requirement discovered during the audit must be added here before acting on it.
 9. **Era neutrality is mandatory.** WW2, Cold War, modern, future, and hypothetical behavior are selectable rulesets/scenarios; none may define or contaminate the era-agnostic core mechanics.
-10. **Blueprint discipline.** Every important subsystem must be traceable here: authority, inputs, outputs, dependencies, and current implementation status. When debugging a domain, start from this blueprint and inspect the listed path before inventing a new mechanism.
+10. **Blueprint discipline.** The Architectural Blueprint is a discovery and debugging index only. It maps what exists, what it does, who depends on whom, and known risks. It does not schedule implementation or override phase order. Newly discovered defects found through blueprint tracing are recorded as findings in the active master-plan phases.
 
 ## Architectural Blueprint / Audit Map
 
-**Purpose:** This is the project-level routing map for future debugging and audits. It is not a second design document. It identifies what currently exists or is intentionally planned, what each part does, and where to inspect first when a domain breaks.
+### Purpose and status
 
-### A. System authority map
+**This section is a map, not the work plan.**
+
+Use it to answer:
+
+- What systems exist?
+- What does each system own/do?
+- What depends on it?
+- What does it depend on?
+- What state is authoritative versus derived?
+- What known bugs/risks touch it?
+- Where should an investigation start when a problem appears?
+
+**Do not use this section to decide what gets coded next.** The phase sections below remain the authoritative coding roadmap. The blueprint may expose a new defect; when direct evidence confirms that defect, add it to the appropriate phase and continue according to phase priority.
+
+### A. System authority and dependency map
 
 ```text
 ORBAT Mapper / host map
-  └── map rendering + UI projection + map-coordinate conversion
-          │
-          │ canonical geographic scenario/unit data
+  owns: map rendering, UI projection, map-coordinate conversion
+          │ supplies/consumes canonical geographic scenario/unit data
           ▼
 DWST scenario boundary
-  └── ScenarioState
-      ├── era
-      ├── elapsedHours / turnHours
-      ├── units: UnitState[]
-      ├── events
-      └── scenario spatial reference contract
+  owns: ScenarioState assembly and scenario inputs
           │
           ▼
 DWST generic core
-  ├── engine / turn orchestration
-  ├── detection pipeline
-  ├── combat orchestration
-  ├── logistics / sustainment
-  ├── time progression
-  ├── spatial invariants
-  └── canonical resource projections
-          │
+  owns: turn orchestration, canonical state transitions, generic detection
+        pipeline, combat orchestration, logistics/sustainment, time, spatial
+        invariants and canonical projections
+          │ selects policy/mechanics through
           ▼
 Era ruleset layer
-  ├── WW2
-  ├── future eras
-  └── scenario-selectable combat / engine policy
+  owns: selectable era-specific coefficients and combat/assessment mechanics
           │
           ▼
-Simulation report
-  └── events + resulting canonical UnitState
+Simulation report / resulting UnitState
+          │
+          └── returned to host/scenario consumers
 ```
+
+**Connection notes:**
+
+- ORBAT Mapper does not become DWST's simulation authority.
+- DWST does not create a competing map/projection layer.
+- Era rulesets do not own canonical scenario state.
+- Generic core orchestration must remain era-neutral.
 
 ### B. Spatial subsystem map
 
 **Authority:** `UnitState.position: WorldPosition`
 
 ```text
-Authoritative physical location
-  UnitState.position
-      │
-      ▼
-  WorldPosition { lon, lat }
-      │
-      ├── spatialInvariant.ts
-      │     validates canonical current position and intent boundaries
-      │
-      ├── geographicMovement.ts
-      │     ├── geographicDistanceMeters()
-      │     └── interpolateGeographicPosition()
-      │
-      ├── engine.ts
-      │     movement consumes geographic movement operations
-      │
-      ├── detection.ts
-      │     contact range must consume canonical geographic distance
-      │
-      ├── combat.ts
-      │     consumes detection/contact distance; does not create position
-      │
-      └── ORBAT Mapper / MapAdapter boundary
-            derives map/UI coordinates only
-            never becomes a second DWST physical authority
+WorldPosition contract
+  spatialPosition.ts
+       │ validates/defines
+       ▼
+UnitState.position  ← authoritative current physical location
+       │
+       ├── spatialInvariant.ts
+       │     checks authority and state consistency
+       │
+       ├── geographicMovement.ts
+       │     owns canonical geographic distance/interpolation primitives
+       │
+       ├── engine.ts
+       │     consumes geographic operations for movement
+       │
+       ├── detection.ts
+       │     consumes geographic distance for contact range
+       │
+       ├── combat.ts
+       │     consumes contact outcomes; must not create a second position
+       │
+       ├── scenario/import/export boundary
+       │     supplies geographic inputs/geometry
+       │
+       └── ORBAT Mapper / MapAdapter
+             derives UI/map coordinates from geographic state
 ```
 
-**Spatial audit checklist:**
+**Spatial risk ledger:**
 
-1. `spatialPosition.ts` — coordinate contract and validity.
-2. `spatialInvariant.ts` — canonical authority enforcement.
-3. `geographicMovement.ts` — canonical distance/interpolation operations.
-4. `engine.ts` — movement callers.
-5. `detection.ts` — range/distance callers.
-6. `combat.ts` — downstream contact-distance use.
-7. scenario geometry/import/export — geographic input boundary.
-8. ORBAT Mapper `MapAdapter` — UI/map conversion boundary only.
-9. Search for legacy patterns: `x/y`, `111`, `Math.hypot`, raw `lon`/`lat` deltas, cosine-scaled longitude, duplicate haversine/great-circle helpers, and antimeridian-unsafe longitude differences.
+- Resolved: legacy x/y battlefield authority.
+- Resolved: engine Cartesian interpolation of lon/lat.
+- Implemented, CI status to record: detection's duplicate approximate geographic distance.
+- Open audit: any remaining duplicate geographic distance helper or antimeridian-unsafe calculation.
+
+**Spatial investigation route:**
+
+1. `spatialPosition.ts`
+2. `spatialInvariant.ts`
+3. `geographicMovement.ts`
+4. direct caller (`engine.ts`, `detection.ts`, etc.)
+5. scenario/import boundary
+6. host map boundary
+7. legacy-pattern search across the repository
 
 ### C. Turn-resolution map
 
@@ -104,25 +120,26 @@ Authoritative physical location
 ScenarioState
    │
    ▼
-resolveTurn()              PURE resolution
-   │
+resolveTurn()             pure resolution
    ├── movement
    ├── sustainment/logistics
    ├── readiness/fatigue/wear
    ├── detection
-   └── era-owned combat
+   └── era-selected combat
    │
    ▼
 SimulationReport
    │
    ▼
-applyTurn()                explicit state application
+applyTurn()               explicit application
    │
    ▼
 next ScenarioState
 ```
 
-**Inspect:** `engine.ts`, `combat.ts`, `detection.ts`, logistics/sustainment modules, era rules, and tests.
+**Primary modules:** `engine.ts`, `combat.ts`, `detection.ts`, logistics/sustainment modules, `eraRules.ts`.
+
+**Known risk:** any hidden legacy entry point that bypasses this path.
 
 ### D. Era/ruleset map
 
@@ -131,16 +148,17 @@ ScenarioState.era
       │
       ▼
 getEraRuleset(era)
-      │
       ├── engine coefficients
       ├── resolveCombat
       ├── unit assessment policy
-      └── future: detection policy if direct evidence requires era variation
+      └── possible future detection policy
 ```
 
-**Rule:** Generic orchestration stays core; historical/era-specific mechanics stay selectable.
+**Current rule:** generic orchestration stays core; historical/era-specific mechanics stay selectable.
 
-### E. Resource/canonical-record map
+**Known open question:** P2-S19 — whether detection needs a minimal era-owned policy boundary.
+
+### E. Canonical records and derived projections
 
 ```text
 Canonical records
@@ -151,24 +169,46 @@ Canonical records
           │
           ▼
 canonicalProjection.ts
-  └── read-only aggregate projection
+          │
+          ▼
+derived aggregate/resource view
 ```
 
-**Rule:** Aggregate projections are derived views, not replacement authorities.
+**Authority rule:** derived projections never replace canonical records.
 
-### F. Debugging entry guide
+### F. Compatibility / legacy map
 
-| Problem domain | Inspect first | Then inspect |
+```text
+Compatibility entry point
+      │
+      ├── direct source consumers?
+      ├── tests?
+      ├── public API/export consumers?
+      └── replacement already canonical?
+               │
+               ▼
+        migrate / prove absent
+               │
+               ▼
+             delete
+```
+
+**Known active audit:** surviving `resolveWW2Engagements()` compatibility entry point in `combat.ts`.
+
+### G. Debugging entry guide
+
+| Problem | Start here | Trace next |
 | --- | --- | --- |
-| Current location wrong | `spatialPosition.ts` | `spatialInvariant.ts` → scenario input → ORBAT boundary |
+| Current location wrong | `spatialPosition.ts` | invariant → geographic operations → scenario input → map boundary |
 | Movement wrong | `geographicMovement.ts` | `engine.ts` → movement tests |
-| Contact/range wrong | `detection.ts` | canonical geographic distance → era policy if present → `combat.ts` |
+| Contact/range wrong | `detection.ts` | geographic distance → ruleset policy if present → `combat.ts` |
 | Combat wrong | `combat.ts` | selected `EraRuleset` → scenario combat module |
-| Era leaking into core | `eraRules.ts` | core imports/callers → scenario modules |
-| State changes unexpectedly | `resolveTurn()` | `applyTurn()` → mutation tests |
-| Personnel/equipment mismatch | canonical records | `canonicalProjection.ts` and crew/equipment contracts |
-| Map looks wrong but sim state is right | ORBAT Mapper boundary | `MapAdapter` / projection layer, not a new DWST map |
-| Geographic anomaly | full Spatial audit checklist | legacy pattern search + all direct distance consumers |
+| Era leakage | `eraRules.ts` | core imports/callers → scenario modules |
+| Unexpected mutation | `resolveTurn()` | `applyTurn()` → mutation tests |
+| Personnel/equipment mismatch | canonical records | projections and crew/equipment contracts |
+| Map wrong, simulation right | ORBAT Mapper boundary | `MapAdapter`/projection layer |
+| Geographic anomaly | spatial map | inspect all direct consumers + legacy pattern search |
+| Legacy compatibility concern | compatibility map | direct consumers → replacement → CI |
 
 ## Phase 2 — Canonical state / spatial consolidation
 
@@ -218,28 +258,3 @@ The generic combat pipeline calls canonical `detectContacts(state)` before selec
 3. Inspect and resolve any remaining geographic-distance duplication or antimeridian-unsafe calculation found by direct evidence.
 4. Audit the surviving `resolveWW2Engagements()` compatibility entry point in `combat.ts` for actual consumers; do not delete without direct consumer proof.
 5. Determine whether P2-S19 needs a ruleset-owned detection policy/interface, and if so define the smallest boundary rather than era-duplicating the pipeline.
-6. Identify and formalize the smallest ORBAT Mapper import/export boundary for scenario/unit geographic data; reuse existing GeoJSON/map contracts rather than adding a projection.
-7. Run a final whole-project audit for duplicate state authority, coordinate systems, era leakage, mutation boundaries, geographic operations, and hidden legacy consumers.
-
-## Findings log
-
-- 2026-08-27: Direct inspection confirmed canonical map path uses geographic `WorldPosition`.
-- 2026-08-27: Direct inspection confirmed legacy battlefield movement/detection used `x/y`.
-- 2026-08-27: Direct inspection confirmed canonical `resolveTurn()` and legacy `resolveUnifiedTurn()` had different state/mutation contracts.
-- 2026-08-27: Verified ORBAT Mapper `MapAdapter` exposes geographic/map coordinate conversion; this is the host map boundary to reuse.
-- 2026-08-27: Confirmed DWST has no verified semantic conversion from legacy battlefield `x/y` to `WorldPosition`; no such conversion is to be invented.
-- 2026-08-27: Confirmed duplicate `defineProps` declaration in `DwstMapOverlay.vue`; removed and validated by green CI run `33100195482`.
-- 2026-08-27: Corrected an earlier detection finding: `core/combat.ts` already invokes canonical `detectContacts(state)` during engagement resolution.
-- 2026-08-27: Confirmed WW2-specific turn orchestration remained in `src/dwst/core/ww2.ts`; active demo caller migrated to generic `simulateTurn()` and validated by green CI run `33106939476`.
-- 2026-08-27: Confirmed duplicate WW2 square-law implementations across core and scenario layers; consolidated into the selectable WW2 scenario layer and validated by green CI runs `33107940693` and `33107899018`.
-- 2026-08-27: Confirmed standalone `src/dwst/core/battlefield.ts` was an independent x/y battlefield state implementation; deleted it without replacement.
-- 2026-08-27: Direct inspection confirmed `CanonicalState` is resource/personnel/equipment authority only while `UnitState.position: WorldPosition` is canonical physical position.
-- 2026-08-27: Direct inspection confirmed `simulationState.ts` and a compatibility detector still depended on deleted `BattlefieldState`; both obsolete paths were removed.
-- 2026-08-27: CI failures exposed the remaining dependency tail after battlefield removal: resolver, logistics, scenario registry, and Ardennes scenario; all were migrated/removed without restoring battlefield state, and the final two runs of the cleanup sequence were green.
-- 2026-08-27: Direct inspection confirmed the generic engine directly interpolated geographic longitude/latitude as Cartesian values; corrected through deterministic great-circle movement operations and focused tests; CI validated.
-- 2026-08-27: Direct inspection confirmed the host map/import-export architecture already provides GeoJSON geographic handling and ORBAT Mapper owns map conversion, so the engine correction remains a small core geographic operation rather than a second map/projection system.
-- 2026-08-27: Executable core spatial invariants were added and CI validated, protecting one authoritative current physical position.
-- 2026-08-27: Direct inspection confirmed `core/ww2.ts` was only a compatibility facade; commit `3efec7b3e363ab12468a31d81c697ef153792b33` removed it after the active caller had already migrated. Subsequent CI run `33117957851` passed type-check and unit tests after the WW2 fixture correction. P2-S8 is closed.
-- 2026-08-27: Direct inspection found `detection.ts` retained approximate lon/lat distance arithmetic after movement had been corrected. Recorded as P2-S18 and migrated toward canonical geographic distance operations with regression tests.
-- 2026-08-27: Direct inspection found era-neutral detection remains a universal core policy while combat is era-selected. Recorded as P2-S19 for a minimal policy-boundary audit rather than premature era-specific detector duplication.
-- 2026-08-27: Architectural Blueprint / Audit Map added to this master plan. Future audits must use the relevant subsystem path and checklist to trace all handlers before adding replacements.
