@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import DwstCommandPanel from './DwstCommandPanel.vue';
-import { parseNaturalLanguageOrder } from '@/dwst/core/orderProcessor';
 import { advanceSimulation, startSimulation } from '@/dwst/core/simulationSession';
-import type { Order, ScenarioState, UnitState } from '@/dwst/core/types';
+import type { Order, UnitState } from '@/dwst/core/types';
 
 const makeUnit = (id: string, name: string, side: UnitState['side'], lon: number, lat: number): UnitState => ({
   id, name, side, echelon: 'division', personnel: 10000, equipment: 250, ammunition: 0.85, fuel: 0.85,
@@ -44,6 +43,13 @@ function issueOrder(unitId: string, order: Order) {
   report.value.unshift(`${unit.name}: ${order.type.toUpperCase()}${order.objective ? ` → ${order.objective}` : ''} (${order.posture ?? 'normal'}).`);
 }
 
+function setTurnHours(turnHours: number) {
+  session.value = {
+    ...session.value,
+    state: { ...state.value, turnHours },
+  };
+}
+
 function advance() {
   const result = advanceSimulation(session.value);
   session.value = result.session;
@@ -59,7 +65,7 @@ function advance() {
   <main class="dwst-demo">
     <div class="topbar"><div><h1>DWST</h1><span>Ardennes 1944 · Operational Prototype</span></div><strong>TURN {{ currentTurn }}</strong></div>
     <div class="layout">
-      <DwstCommandPanel :units="units" @order="issueOrder" @advance="advance" />
+      <DwstCommandPanel :units="units" :turn-hours="state.turnHours" @order="issueOrder" @update:turn-hours="setTurnHours" @advance="advance" />
       <section class="situation">
         <h2>Force Status</h2>
         <article v-for="unit in units" :key="unit.id" class="unit" :class="unit.side">
