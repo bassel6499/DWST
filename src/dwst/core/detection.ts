@@ -1,7 +1,8 @@
+import { geographicDistanceMeters } from './geographicMovement';
 import type { ScenarioState, UnitState } from './types';
 
 const clamp=(v:number,min=0,max=1)=>Math.max(min,Math.min(max,v));
-const km=(a:UnitState['position'],b:UnitState['position'])=>{const y=(b.lat-a.lat)*111;const x=(b.lon-a.lon)*111*Math.cos(((a.lat+b.lat)/2)*Math.PI/180);return Math.hypot(x,y)};
+const km=(a:UnitState['position'],b:UnitState['position'])=>geographicDistanceMeters(a,b)/1000;
 export type SensorType='visual'|'recon'|'airRecon'|'signals';
 export interface Sensor { id:string; unitId:string; type:SensorType; rangeKm:number; quality:number; }
 export interface Contact { observerId:string; targetId:string; distanceKm:number; probability:number; detected:boolean; confidence:'unknown'|'unit'|'formation'; }
