@@ -14,6 +14,8 @@
 10. **Blueprint discipline.** The Architectural Blueprint is a discovery and debugging index only. It maps what exists, what it does, who depends on whom, and known risks. It does not schedule implementation or override phase order. Newly discovered defects found through blueprint tracing are recorded as findings in the active master-plan phases.
 11. **Roadmap separation.** The original long-term DWST roadmap and the current refactor plan are both authoritative, but serve different purposes. The long-term roadmap defines project phases and end-state scope; this document defines the currently active architectural/refactor work. Neither may silently replace the other.
 12. **No duplicate work.** Before opening a new implementation item, reconcile it against completed findings, the long-term roadmap, current source, and prior CI evidence. A completed architectural correction must not be reintroduced as new work merely because its historical roadmap item remains listed.
+13. **Repository-source verification is mandatory.** Never use GitHub/code-search results as evidence that a file, symbol, consumer, or implementation does or does not exist. Search indexes may be incomplete, stale, or broken. For architecture audits, dependency audits, deletion decisions, and closure decisions, inspect the current branch's actual repository tree and source files directly. Search may be used only as a convenience to locate candidates; it is never sufficient evidence of absence or completeness.
+14. **Audit closure requires direct inspection.** Do not close an audit because search returns zero results. Closure requires direct inspection of the relevant repository paths/files and, where practical, tracing their consumers and checking the resulting source state. CI remains a separate gate and does not replace this inspection.
 
 ## Long-term DWST roadmap — preserved project-level roadmap
 
@@ -203,7 +205,7 @@ getEraRuleset(era)
 
 **Current rule:** generic orchestration stays core; historical/era-specific mechanics and coefficients stay selectable.
 
-**Current implementation:** one canonical detection pipeline remains in `detection.ts`; `DetectionPolicy` is selected through the era ruleset and passed into that pipeline rather than duplicating detection by era.
+**Current implementation:** one canonical detection pipeline remains in `detection.ts`; `DetectionPolicy` is selected through the era ruleset and parameterizes range/sensor/intelligence/readiness/weather/terrain/confidence behavior without duplicating detection by era.
 
 ### E. Canonical records and derived projections
 
@@ -314,17 +316,19 @@ Direct inspection found `engagementModel.ts` and `combatArms.ts` under `src/dwst
 
 **Audit classification:** simulation mechanics must use canonical geographic semantics; UI/rendering/projection calculations may legitimately use their own geometry when they are demonstrably outside simulation state/mechanics and remain at the appropriate host/map boundary.
 
+**Evidence rule:** repository/code search results are not sufficient to close this audit. The audit must be based on direct inspection of the current branch tree and relevant source files. Search may assist candidate discovery only.
+
 #### P2-S22 — Master-plan state synchronization / roadmap separation
 
 **Purpose:** prevent the active refactor document from drifting away from the repository or from obscuring the long-term roadmap.
 
-**Resolution:** this document now explicitly preserves the long-term Phase 0–15 roadmap separately from the detailed Phase 2 refactor plan and states the reconciliation rules between them.
+**Resolution:** this document explicitly preserves the long-term Phase 0–15 roadmap separately from the detailed Phase 2 refactor plan and states the reconciliation rules between them. Repository-source verification is now also an explicit governing rule.
 
 **Status:** Implemented as documentation/process control. Future material refactor changes must update the applicable detailed finding and, where relevant, the project-level phase status rather than silently replacing either layer.
 
 ### Current Phase 2 execution order
 
-1. **P2-S21 audit:** complete the repository-wide geographic-distance/antimeridian investigation using direct source evidence.
+1. **P2-S21 audit:** complete the repository-wide geographic-distance/antimeridian investigation using direct source evidence and direct tree/file inspection; do not rely on code-search absence.
 2. Record every confirmed spatial defect before implementation; do not bundle unrelated fixes into the same item.
 3. For each confirmed defect, identify all required consumers and the canonical replacement path.
 4. Only after explicit authorization, implement the minimum correction and focused regression coverage.
@@ -337,7 +341,7 @@ Direct inspection found `engagementModel.ts` and `combatArms.ts` under `src/dwst
 ## Findings log
 
 - 2026-08-27: Direct inspection confirmed canonical map path uses geographic `WorldPosition`.
-- 2026-08-27: Direct inspection confirmed legacy battlefield movement/detection used `x/y`.
+- 2026-08-27: Direct inspection confirmed legacy x/y battlefield movement/detection paths had existed and were being retired.
 - 2026-08-27: Direct inspection confirmed canonical `resolveTurn()` and legacy `resolveUnifiedTurn()` had different state/mutation contracts.
 - 2026-08-27: Verified ORBAT Mapper `MapAdapter` exposes geographic/map coordinate conversion; this is the host map boundary to reuse.
 - 2026-08-27: Confirmed DWST has no verified semantic conversion from legacy battlefield `x/y` to `WorldPosition`; no such conversion is to be invented.
@@ -349,10 +353,11 @@ Direct inspection found `engagementModel.ts` and `combatArms.ts` under `src/dwst
 - 2026-08-27: Direct inspection confirmed `CanonicalState` is resource/personnel/equipment authority only while `UnitState.position: WorldPosition` is canonical physical position.
 - 2026-08-27: Direct inspection confirmed `simulationState.ts` and a compatibility detector still depended on deleted `BattlefieldState`; both obsolete paths were removed.
 - 2026-08-27: CI failures exposed the remaining dependency tail after battlefield removal: resolver, logistics, scenario registry, and Ardennes scenario; all were migrated/removed without restoring battlefield state, and the final two runs of the cleanup sequence were green.
-- 2026-08-27: Direct inspection confirmed the generic engine directly interpolates geographic longitude/latitude as Cartesian values; recorded as P2-S17 before correction.
+- 2026-08-27: Direct inspection confirmed the generic engine directly interpolated geographic longitude/latitude as Cartesian values; recorded as P2-S17 before correction.
 - 2026-08-27: Direct inspection confirmed the host map/import-export architecture already provides GeoJSON geographic handling and ORBAT Mapper owns map conversion, so the engine correction must remain a small core geographic operation rather than a second map/projection system.
 - 2026-08-28: P2-S18 closed after canonical geographic distance adoption and green accumulated branch CI.
 - 2026-08-28: P2-S19 closed after implementing the minimal era-owned detection policy boundary and green accumulated branch CI.
 - 2026-08-28: P2-S20 closed after direct audit/removal of unused WW2-specific core modules and green accumulated branch CI.
 - 2026-08-28: P2-S21 opened for repository-wide legacy geographic-distance and antimeridian audit.
 - 2026-08-28: P2-S22 established roadmap/refactor-plan separation and synchronization rules to prevent future plan drift or duplicate work.
+- 2026-08-28: Added explicit repository-source verification rules after GitHub code-search returned false negatives for symbols/files directly confirmed to exist in the current branch.
