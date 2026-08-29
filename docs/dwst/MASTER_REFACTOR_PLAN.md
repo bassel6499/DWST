@@ -27,6 +27,7 @@
 19. Reproducible simulations must identify the exact scenario/data version, ruleset/model version, initial state, command/order log, and RNG seed/state used to produce the result.
 20. Presentation, UI, ORBAT Mapper, and future conversational/AI interfaces must never become alternate simulation authorities or contain authoritative simulation logic.
 21. Simulation-engine correctness and historical-data correctness are separate validation questions. Neither may be used to mask failure of the other.
+22. When a new conversation begins or the user says to return to the plan, the assistant must first perform a repository/plan state-recovery pass before proposing, implementing, or modifying anything. The recovery pass must establish the current branch, current master-plan version, active critical-path item, outstanding blockers, and relevant recent commits. No implementation changes may be made during this recovery pass.
 
 ## Original roadmap preservation
 
