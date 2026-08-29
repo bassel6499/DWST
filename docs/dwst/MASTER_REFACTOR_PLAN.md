@@ -1,390 +1,143 @@
 # DWST Master Refactor Plan
 
-> Authoritative roadmap and current refactor state for `audit/canonical-state-refactor`.
->
-> This document is documentation only. It is not imported, executed, or required by DWST runtime/project code.
+## Mission
+Refactor DWST into a deterministic, testable, era-aware simulation engine with explicit state authority, geographic spatial semantics, canonical accounting, and a clean visualization boundary.
 
-## Plan authority and synchronization rules
+## Working rules
 
-1. This file is the single authoritative current roadmap/state document under `docs/dwst/`.
-2. The roadmap must preserve the original roadmap phases, milestones, rationale, and completed history. New findings are appended to the appropriate phase; they do not replace older records.
-3. Never create a competing plan, ledger, sidecar roadmap, or alternate current-state file.
-4. Before making claims about repository state, inspect the current branch and relevant source files directly. Search/index results are discovery aids only and are never proof of absence or current state.
-5. All plan edits must follow Rule 23. This rule does not define a separate write procedure and must not be interpreted as an alternative to the transactional protocol in Rule 23.
-6. After every implementation, CI result, audit finding, or architectural decision, update this document before advancing to unrelated work, subject to the safe transactional procedure in Rule 23.
-7. Record CI as `running`, `red`, `green`, or `user-confirmed green`; never infer green from a commit or from a later run.
-8. If a plan update cannot be safely completed, apply Rule 23 exactly: do not create another authority, silently proceed, reconstruct from memory, or retry against stale state.
-9. Plan documents are documentation only and must not be imported by, bundled into, or otherwise directly affect project runtime code.
-10. A new chat must be able to recover project state from this file plus the repository itself; conversational memory is not a required source of truth.
-11. Phase 2 is tracked as three implementation stages. Closing a stage does not close the phase until the remaining stage backlog and merge gates are satisfied.
-12. Historical findings from older roadmap/audit documents must be promoted into the active backlog when they remain unresolved; they must not disappear merely because a newer milestone was completed.
-13. Every active bug/backlog item must have an explicit status and remain visible until directly verified closed.
-14. An item may not be marked `CLOSED` merely because code exists, tests exist, or CI is green. Closure requires direct verification against the item's stated acceptance criteria and confirmation that the implementation is actually connected to the intended live path.
-15. Do not silently invent or guess repository state, requirements, historical facts, simulation behavior, test outcomes, or missing data. If something is unknown or not directly verified, label it unknown/unverified and inspect it rather than filling the gap with a plausible assumption.
-16. Missing, invalid, unsupported, or ambiguous simulation inputs must not silently receive plausible defaults unless that fallback is explicitly defined by the applicable ruleset or interface contract.
-17. Placeholder coefficients, zero-value capabilities, simplified mechanics, and hard-coded assumptions must be explicitly identified and must not be represented as completed simulation capabilities.
-18. Every authoritative state change must be attributable to an explicit simulation event/delta or documented initialization operation.
-19. Reproducible simulations must identify the exact scenario/data version, ruleset/model version, initial state, command/order log, and RNG seed/state used to produce the result.
-20. Presentation, UI, ORBAT Mapper, and future conversational/AI interfaces must never become alternate simulation authorities or contain authoritative simulation logic.
-21. Simulation-engine correctness and historical-data correctness are separate validation questions. Neither may be used to mask failure of the other.
-22. When a new conversation begins or the user says to return to the plan, the assistant must first perform a repository/plan state-recovery pass before proposing, implementing, or modifying anything. The recovery pass must establish the current branch, current master-plan version, active critical-path item, outstanding blockers, and relevant recent commits. No implementation changes may be made during this recovery pass.
-23. **Plan-update protocol is serialized and transactional:** before every plan edit, retrieve the current branch head and the complete current plan blob; use the exact current blob SHA as the concurrency guard; preserve the complete retrieved document and make only the authorized change; perform one write against that exact SHA; then re-fetch the resulting file/commit and verify the intended change and preservation of the plan. If the content is truncated, the SHA is stale/unknown, the write fails, or the result is ambiguous, stop and do not reconstruct from memory, create a parallel plan, retry against a stale SHA, or silently proceed. When the normal contents-file writer is unreliable, use the Git Data API sequence documented by GitHub—create blob, create tree from the verified current tree, create commit with the verified current HEAD as parent, update the branch ref, then re-fetch and verify—provided the required GitHub operations are available. This Rule 23 protocol supersedes any older or duplicate plan-edit procedure elsewhere in this document.
+1. Do not guess. Any uncertain behavior, architecture, dependency, historical fact, or implementation detail must be verified directly from the repository, tests, authoritative documentation, or explicitly marked as unknown.
+2. Never start code or repository changes unless explicitly authorized by the user.
+3. Inspect the actual current repository state before making implementation decisions; do not rely on stale summaries or memory.
+4. Prefer the smallest safe change that establishes the required invariant without unrelated refactoring.
+5. Keep the master plan synchronized with verified implementation status. All plan edits must follow Rule 23.
+6. A green CI is evidence for the commit it ran against; do not generalize beyond what its tests actually establish. Plan closure requires satisfying the item's stated acceptance criteria.
+7. Do not mark an item fixed merely because code exists. Verify behavior and, where required, consumer/dependency removal directly.
+8. Never create a parallel or reconstructed version of the master plan when an update fails. Treat an ambiguous or failed plan write as not completed and follow Rule 23.
+9. Preserve backward compatibility unless the plan explicitly authorizes a breaking change.
+10. Keep simulation logic independent from visualization/adapters. ORBAT Mapper may render DWST state but must not become simulation authority.
+11. Keep era-specific rules isolated from core state and orchestration. Historical assumptions belong in explicit era/ruleset modules.
+12. Canonical state must have one authoritative representation for each physical/resource fact. Derived aggregates are projections, not competing authorities.
+13. Simulation resolution should be deterministic for identical inputs, rules, and explicit RNG seeds/state.
+14. Do not silently invent conversions between coordinate systems. Any spatial conversion must be explicit, tested, and owned by the correct boundary.
+15. Pure resolution functions must not mutate supplied input state. State mutation belongs at an explicit application/commit boundary.
+16. Accounting changes must reconcile between detailed canonical records and reported aggregates; unexplained discrepancies are failures, not acceptable approximation.
+17. Regression tests must cover newly established invariants and must not be weakened merely to obtain green CI.
+18. When repository tooling returns incomplete, truncated, stale, or contradictory data, stop and obtain a complete authoritative snapshot before writing.
+19. When a finding is deferred, record it rather than silently dropping it. Deferred findings may be addressed later without reopening unrelated completed work.
+20. Work in dependency order, but revalidate dependencies against the current repository before implementing a planned item.
+21. Never mix unrelated fixes into an active task merely because they are discovered during inspection. Record them for later unless they are required to make the active task correct.
+22. For every implementation task, inspect the relevant current code, tests, and callers/consumers before deciding the change is complete.
+23. **Authoritative plan-update protocol — sole procedure for modifying this plan:**
+   - Retrieve the current branch HEAD and the complete current plan blob before editing.
+   - Obtain and retain the exact current blob SHA; it is the concurrency guard.
+   - Never edit from a truncated display, stale copy, memory, or a reconstructed version of the plan.
+   - Apply only the explicitly authorized change to the complete retrieved document; preserve all unrelated content exactly.
+   - Serialize plan writes: never issue concurrent updates to this file.
+   - Prefer the low-level Git Data workflow (new blob → tree → commit → branch ref) when the normal contents writer cannot safely accept the complete update. The high-level contents writer may be used when it reliably accepts the complete replacement and exact SHA.
+   - If any write fails, is ambiguous, uses a stale SHA, or returns incomplete data, treat the update as **not completed**. Do not retry against the stale SHA and do not create an alternative plan.
+   - After a successful write, re-fetch the resulting plan from the new commit/blob and verify both the intended change and preservation of the complete document.
+   - Only after that verification may the plan be described as updated.
+   - This Rule 23 supersedes any older or duplicate plan-edit procedure.
 
-## Original roadmap preservation
+## Phase 2 — Canonical state and simulation integrity
 
-The original refactor roadmap remains the implementation backbone. Historical phase intent and completed work must remain represented when current-state restructuring is performed. Architectural discoveries found through the Audit Map and older refactor-gate documents are recorded against the appropriate master-plan phase before implementation.
+### Pre-B-series findings
 
-The older architecture audit established the following refactor sequence and these remain binding design constraints:
-1. Freeze feature additions.
-2. Establish canonical simulation state and explicit adapters for legacy state.
-3. Establish canonical equipment and crew accounting.
-4. Establish a versioned era/model contract containing formulas and coefficients.
-5. Make combat resolution pure: input snapshot -> result delta; no hidden mutation.
-6. Make sustainment pure and explicit about resource deltas.
-7. Make the turn engine the only component allowed to commit state changes.
-8. Add deterministic regression fixtures before historical scenarios.
-9. Add Ardennes as scenario data only after the kernel passes fixtures.
-10. Add ORBAT Mapper/map integration only as a presentation/import/export adapter.
+| ID | Finding | Status | Closure requirement |
+|---|---|---|---|
+| P2-S1 | Two operational turn-resolution models | OPEN | Prove the canonical turn path is authoritative and obsolete resolver consumers are removed or explicitly justified. |
+| P2-S2 | Duplicate spatial representations | CLOSED | `WorldPosition` is the sole physical-location authority in current operational state and movement. |
+| P2-S3 | Duplicate detection implementations | CLOSED | Canonical `detectContacts()` is the operational detection implementation; no competing implementation remains in use. |
+| P2-S4 | No verified x/y → geographic conversion | SATISFIED CONSTRAINT | Do not invent a conversion; geographic state remains authoritative. |
+| P2-S5 | ORBAT Mapper map-coordinate ownership | SATISFIED | Visualization/projection remains outside simulation authority. |
+| P2-S6 | Legacy BattlefieldState remains live | CLOSED | Legacy battlefield state is no longer an operational authority. |
+| P2-S7 | Spatial consistency invariant | CLOSED | Geographic state and map/turn projection preserve the same authoritative position semantics. |
 
-## Architectural boundary rules
+### S27 — Canonical resource accounting bridge
 
-- WW2 is a selectable scenario/ruleset, never a generic core mechanic.
-- ORBAT Mapper is the external map-display/projection system; DWST supplies canonical simulation state and geographic positions.
-- The application `scenariostore` geographic model is separate from DWST scenario data. Do not introduce an implicit dependency merely to resolve DWST objectives.
-- The Architectural Blueprint/Audit Map is a discovery/debugging map, not an implementation roadmap.
-- CI is a validation gate, not architectural proof.
-- Canonical simulation state owns authoritative records; projections/read models must not silently become authorities.
-- DWST must remain independently usable as a simulation engine without requiring ORBAT Mapper or any other visualization layer. Visualization and conversational interfaces consume DWST outputs; they do not own simulation truth.
-- A conversational/AI interface may translate human intent into validated DWST orders and explain DWST results, but it must never invent outcomes or mutate canonical state directly.
-
-## Phase 2 — Canonical State / Architecture Refactor
-
-### Stage 1 — Canonical state foundations
-
-### P2-S18 — Detection geographic-distance refactor
-**Status: CLOSED / CI GREEN**
-
-Detection uses the canonical geographic-distance path rather than a duplicate distance implementation.
-
-### P2-S20 — WW2-specific core leakage audit
-**Status: CLOSED / CI GREEN**
-
-Unused WW2-specific core engagement/combat-arms implementations were removed. The surviving WW2 compatibility surface was audited rather than treating WW2 as generic core behavior.
-
-### P2-S21 — legacy geographic-distance audit
 **Status: CLOSED**
 
-The canonical spatial path is `geographicDistanceMeters()` / geographic movement. Legacy duplicate distance paths were removed or retired where verified.
+- S27-A: canonical commit contract — COMPLETE / CI GREEN.
+- S27-B: deterministic allocation — COMPLETE / CI GREEN.
+- S27-C: canonical projection boundary — COMPLETE / CI GREEN; WorldPosition fixture corrected to the actual `{lat, lon}` contract.
+- S27-D: live canonical turn integration and regression coverage — COMPLETE / CI GREEN; both validation runs reported green by the user.
 
-### Stage 2 — Scenario/state integration
+S27 establishes the canonical resource path:
 
-### P2-S23 — scenario geographic objectives / locations
-**Status: CLOSED / CI GREEN (user-confirmed)**
+`canonical records → projection → live simulation state → explicit deterministic allocation → canonical commit → projection`
 
-Implemented a generic DWST scenario-location contract and resolver. Named scenario objectives resolve to canonical `WorldPosition` values and feed `Order.destination` without coupling DWST to the application `scenariostore` or ORBAT Mapper.
+No implicit casualty/equipment disposition guessing is permitted.
 
-Implementation included the Ardennes Bastogne location, live order-path integration, preservation through simulation-session cloning, and focused/end-to-end tests.
+### Active B-series / remaining Phase-2 work
 
-Validation history:
-- CI `33255461370`: RED — initial integration test had a TypeScript optional-location error.
-- Corrective test commit: `77c37f93592d23a35c629e9aac61362a76b68c30`.
-- CI `33255660136`: RED — integration assertion incorrectly assumed latitude must increase.
-- Corrective commit: `a4df75f97256a17d057de84670660638e5ec9f7b`; assertion changed to the canonical decreasing-distance invariant.
-- Subsequent CIs: USER-CONFIRMED GREEN.
+B01 — Aggregate-vs-detailed reconciliation: validate every remaining aggregate mutation/projection path and eliminate competing authority.
 
-### P2-S33 — Ardennes scenario authority / duplicate scenario definitions
-**Status: CLOSED / CI GREEN (user-confirmed)**
+B02 — State transition invariants: strengthen executable invariants around valid state transitions.
 
-Audited the scenario architecture and established that DWST's Ardennes scenario is separate from the application's general `scenariostore`/map system. Duplicate Ardennes scenario definitions were removed after direct source inspection; the populated `src/dwst/scenarios/ardennes1944.ts` remains the surviving scenario fixture.
+B03 — Direct combat/state mutation audit: ensure combat produces results and does not bypass the explicit application/commit boundary.
 
-Deletion commits:
-- `b58eb2bc9f0d79df440a4d3299b2de7d8d1404b4`
-- `5453ec4ae2632fccd9bf16377ee0e50d483ace6c`
+B04 — Deterministic RNG: make stochastic behavior reproducible from explicit seed/state.
 
-Both deletion CIs were user-confirmed green.
+B05 — Accounting/replay regression: prove detailed accounting and replay determinism over representative turns.
 
-Permanent constraint: do not merge the application scenario-store geography into DWST merely to provide objective resolution.
+B06 — Orders/command validation: enforce valid orders and command semantics at the correct boundary.
 
-### Stage 3 — Canonical accounting, deterministic resolution, and production gates
+B07 — Turn-entry and map invariants: retain executable checks for turn entry, geographic state, and projection consistency.
 
-### P2-S27 — canonical personnel/equipment commit bridge
-**Status: CLOSED / S27-A THROUGH S27-D IMPLEMENTED / CI GREEN (user-confirmed)**
+B08 — One authoritative turn-state commit boundary: consolidate live state mutation so subsystems cannot silently create competing state authorities.
 
-`CanonicalState` is the authoritative resource state containing personnel, equipment, crew assignments, and equipment definitions. The projection layer treats these records as authoritative while `UnitState` is a derived aggregate. S27 established the canonical resource authority boundary through the live simulation boundary without creating a speculative second `UnitState` layer.
+B09 — Detection/sensor integration: ensure actual sensor inputs and policies reach detection rather than silently defaulting to unaided detection.
 
-#### S27-A — explicit canonical combat commit contract
-**Status: IMPLEMENTED / CI GREEN (user-confirmed)**
+B10 — Combat ruleset isolation and era ownership: maintain separation between core orchestration and era-specific combat behavior.
 
-Added `src/dwst/core/canonicalCombatCommit.ts`. The contract accepts explicit personnel IDs and equipment instance IDs with explicit dispositions and applies those changes immutably to `CanonicalState`. It rejects duplicate and unknown record allocations. No casualty identity or disposition is invented by the commit layer.
+B11 — Logistics/sustainment semantics: verify resource consumption and recovery rules are explicit and deterministic.
 
-Commit: `dc897ab290ec863cd6d8b424aedca05072ce7a47`.
+B12 — Event/history accounting: ensure events and unit history reconcile with committed state changes.
 
-Focused tests were added in `src/dwst/core/canonicalCombatCommit.test.ts`, covering explicit allocation, immutability, duplicate IDs, and unknown IDs.
+B13 — Engagement integration: verify canonical detection feeds engagement resolution through the intended interface.
 
-Test commit: `efce9936d4bbf816ad38fc863db201728a8b5e93`.
+B14 — Scenario validation: reject invalid/incomplete scenarios before simulation.
 
-#### S27-B — deterministic casualty/resource allocation
-**Status: IMPLEMENTED / CI GREEN (user-confirmed)**
+B15 — Serialization/deserialization: round-trip canonical state without semantic loss.
 
-Added `src/dwst/core/canonicalCombatAllocation.ts` and focused tests in `src/dwst/core/canonicalCombatAllocation.test.ts`.
+B16 — CLI/API boundary: keep external interfaces thin and prevent adapter logic from becoming simulation authority.
 
-The generic allocator converts aggregate personnel/equipment loss counts into explicit canonical IDs using an explicit `CombatAllocationPolicy`. It requires the source unit, explicit eligible personnel/equipment statuses, explicit dispositions, and an explicit `stable-id` selection policy. Candidates are restricted to the specified unit, sorted by canonical ID, and selected deterministically. It rejects negative/non-integer loss counts and requests exceeding eligible resources.
+B17 — Visualization projection: preserve ORBAT Mapper as a consumer/projection layer only.
 
-This is intentionally an accounting allocation policy, not a WW2 casualty model. It does not invent historical casualty distributions or infer dispositions. A future era-specific policy can replace the generic selection policy without changing the canonical commit contract.
+B18 — Standalone reporting: DWST must support operation without a graphical map by producing deterministic written simulation reports suitable for a chat-like interaction.
 
-Implementation commits:
-- `7c95e6d3ef296f6f9e0522cb5b54dec3c887a` — initial S27-B allocator.
-- `e5d23583e2b23fe9576a819397ac356ee0cb36e0` — readonly policy-input type correction.
-- `da5ca09bbf988d31cfb627033ab15525dbf26510` — S27-B focused tests.
+B19 — Reporting determinism: identical simulation inputs must produce stable machine-readable and human-readable reports apart from explicitly permitted presentation metadata.
 
-Validation:
-- CI `33272307366`: RED — initial S27-B type errors.
-- CI `33272314088`: RED — implementation plus readonly-policy test typing errors.
-- CI `33272322070`: RED — implementation status-contract errors remained.
-- CI `33272351810`: RED — implementation status-contract errors remained.
-- Corrective implementation commit: `04834d1237a454bfb61a22f53b903fb45cf0e64b`.
-- CI `33272533208`: GREEN (user-confirmed), including type-check and unit tests.
+B20 — Scenario/era fixture coverage: maintain representative fixtures across supported eras without leaking era-specific assumptions into core.
 
-#### S27-C — canonical-to-unit projection reconciliation
-**Status: IMPLEMENTED / CI GREEN (user-confirmed)**
+B21 — Performance/resource profile: establish practical runtime/resource expectations for desktop and constrained environments after correctness is stable.
 
-Established the canonical-to-scenario resource projection boundary without introducing a speculative second `UnitState` implementation. Canonical personnel/equipment records are used to reconcile unit resource aggregates while simulation-only operational state such as position and readiness is preserved.
+B22 — Full-system simulation test: exercise a representative multi-turn scenario through the complete authoritative pipeline.
 
-Implementation commit: `bd1c088948637f7587b9f35b032bc63c70e5a832`.
+B23 — Branch/main integration readiness: verify Phase-2 invariants and CI before merging the refactor branch into main; do not merge merely because individual tasks are green.
 
-Focused tests: `281885caf0125ad5e6e30e5c3a3555b651744d81`, followed by corrective `WorldPosition` fixture commit `ab9f24c292967ba0cfb3b470f8dbf1b51f488092`.
+B24 — Final legacy-path audit: search the current tree for superseded state/resolution paths and close only those proven dead.
 
-Validation:
-- CI `33273344178`: GREEN (user-confirmed).
-- CI `33273371628`: GREEN (user-confirmed).
-- CI `33273377350`: RED — test fixture used non-existent `latitude` property.
-- Corrective commit: `ab9f24c292967ba0cfb3b470f8dbf1b51f488092` using the actual `{lat, lon}` contract.
-- CI `33273631899`: GREEN (user-confirmed), including type-check and unit tests.
+B25 — Plan/repository synchronization audit: verify every closed plan item against repository evidence before Phase-2 completion.
 
-#### S27-D — live-turn integration and replay regression
-**Status: IMPLEMENTED / CI GREEN (user-confirmed)**
+B26 — Phase-2 completion gate: all mandatory acceptance criteria, CI, replay/accounting, and full-system tests must pass before declaring Phase 2 complete.
 
-Added the canonical live simulation boundary and regression coverage. The canonical session projects resource aggregates before turn resolution, resolves the live turn, converts aggregate losses into explicit canonical allocations under the declared policy, commits authoritative canonical changes, and re-projects the resulting state.
+## Deferred findings / later hardening
 
-Implementation commit: `7db12351ff4d4eb65bb3f70a0f10b6e7cbd4a240`.
+Findings discovered during audits that are not prerequisites for the active task must be recorded here and addressed later in dependency order. They must not be silently mixed into unrelated fixes.
 
-Regression test commit: `0cd0eec152c6cd8f54b7a6243935d09d28310556`.
+Known deferred areas include deeper sensor realism, broader combat-model fidelity, performance optimization, and any architectural cleanup not required by the active Phase-2 acceptance criteria.
 
-Validation:
-- CI `33274053508`: GREEN (user-confirmed).
-- CI `33274063460`: GREEN (user-confirmed).
+## Execution discipline
 
-The S27 completion audit verified the four stages as a coherent canonical resource-accounting chain. S27 is therefore closed. The broader Phase-2 backlog remains active because S27 does not by itself close the other architectural findings.
+For each task:
 
-### Remaining Phase-2 backlog promoted from the older architecture audit / refactor gates
-
-These items remain active unless directly verified closed. They are deliberately tracked separately from S27 so later work cannot make them disappear:
-
-#### P2-B01 — Aggregate-vs-detailed equipment/personnel reconciliation
-**Status: ACTIVE**
-
-`UnitState` aggregate personnel/equipment fields must be reconciled with the detailed authoritative ledgers/records. Compatibility fields must not become a second accounting authority.
-
-#### P2-B02 — Duplicate crew training/reinforcement pipeline
-**Status: ACTIVE**
-
-Older refactor gates identify duplicate crew training/reinforcement implementations. Establish one authoritative pipeline and verify specialist qualification rules remain explicit and deterministic.
-
-#### P2-B03 — Direct combat state mutation removal
-**Status: ACTIVE / coupled to S27**
-
-Combat resolution must remain a pure snapshot-to-delta operation. All authoritative state mutation must occur through the turn/state-application commit boundary.
-
-#### P2-B04 — Deterministic RNG/state handling
-**Status: ACTIVE**
-
-Define and enforce canonical deterministic RNG/state handling so identical state + orders + ruleset + seed produce identical results.
-
-#### P2-B05 — Accounting and replay regression suite
-**Status: ACTIVE**
-
-Add regression tests covering personnel/equipment accounting, authoritative-state transitions, deterministic replay, and reproducibility from saved initial state plus ordered command log.
-
-#### P2-B06 — Independent mathematical combat-model validation
-**Status: ACTIVE**
-
-Validate combat mathematics independently before coupling further historical scenario/UI behavior. Coefficients must remain inspectable and must not be tuned solely to create attractive outcomes.
-
-#### P2-B07 — Sustainment/resource-delta purity audit
-**Status: ACTIVE**
-
-The older architecture sequence requires sustainment to be pure and explicit about resource deltas. Verify the current implementation has one authoritative commit path and no hidden mutation.
-
-#### P2-B08 — One authoritative turn-state commit boundary
-**Status: ACTIVE**
-
-The turn engine/state application layer must be the only component allowed to commit simulation state changes. Audit remaining direct mutation paths after S27.
-
-#### P2-B09 — Deterministic regression fixtures before historical validation
-**Status: ACTIVE**
-
-Build/verify deterministic kernel fixtures before expanding historical scenario validation. Historical scenario content must not be used to hide kernel instability.
-
-#### P2-B10 — Historical provenance/model-assumption separation
-**Status: ACTIVE**
-
-Historical claims require provenance and must remain distinguishable from model assumptions. The engine must not invent OOB data.
-
-#### P2-B11 — Final ORBAT Mapper adapter boundary audit
-**Status: ACTIVE / later-stage gate**
-
-ORBAT Mapper remains presentation/import/export only. Verify that future map integration cannot modify simulation mathematics or become a source of combat truth.
-
-### Additional independent audit findings — deferred until current critical-path work is complete
-
-These findings were discovered by direct inspection of the current repository after the existing Phase-2 plan was established. They are deliberately **deferred** rather than allowed to interrupt S27 and the already-active Phase-2 dependency chain. They must remain visible and be addressed after the current critical-path work, before Phase 2 can be declared complete.
-
-#### P2-B12 — Combat-power authority audit
-**Status: ACTIVE / DEFERRED**
-
-Determine whether `UnitState.combatPower` is authoritative, derived, or obsolete. The current Ardennes fixture initializes `combatPower` to zero while the engine also derives an effective combat-power value, and the WW2 combat resolver uses a separate effectiveness calculation. Eliminate competing or dead combat-effectiveness paths and establish one authoritative semantic.
-
-#### P2-B13 — Sensor-to-engagement integration
-**Status: ACTIVE / DEFERRED**
-
-The detection system supports sensors, but the current engagement-resolution path supplies an empty sensor list. Establish the intended sensor-to-detection-to-engagement pipeline and verify actual sensor capabilities affect detection when they are supposed to.
-
-#### P2-B14 — Resource-gated movement
-**Status: ACTIVE / DEFERRED**
-
-Fuel currently drains with movement but does not meaningfully prevent or constrain movement when depleted. Define and test fuel-gated movement, including the intended behavior for zero/insufficient fuel and resupply/recovery.
-
-#### P2-B15 — Ammunition expenditure and replenishment
-**Status: ACTIVE / DEFERRED**
-
-Ammunition currently modifies combat effectiveness but is not consumed by combat in the same authoritative resource path. Define explicit ammunition deltas and authoritative replenishment/sustainment behavior.
-
-#### P2-B16 — Multi-engagement resolution semantics
-**Status: ACTIVE / DEFERRED**
-
-Define whether engagements within a turn are simultaneous, sequential, phased, or initiative-based. Prevent stale pre-combat strength from causing incorrect repeated exposure or order-dependent outcomes when units participate in multiple engagements.
-
-#### P2-B17 — Combat numerical stability and extreme-case validation
-**Status: ACTIVE / DEFERRED**
-
-Stress-test the WW2 square-law/RK4 implementation across zero/near-zero and highly asymmetric force ratios, extreme modifiers, repeated turns, and large values. Establish explicit invariants for finite, non-negative, bounded results and expected limiting behavior.
-
-#### P2-B18 — Physical movement model audit
-**Status: ACTIVE / DEFERRED**
-
-The current geographic movement model advances units by a fraction of remaining distance rather than an explicit physical movement capability. Define the required movement semantics, including unit movement capability and appropriate terrain/road/formation/logistics effects, before treating operational movement as complete.
-
-#### P2-B19 — Order normalization boundary
-**Status: ACTIVE / DEFERRED**
-
-Ensure named objectives are resolved into canonical destinations before an order reaches turn resolution, or otherwise make the contract explicit and enforce it. Avoid partially specified orders silently becoming no-ops.
-
-#### P2-B20 — Spatial environment model
-**Status: ACTIVE / DEFERRED**
-
-Assess whether terrain and weather need geographic/area-specific representation rather than only scenario-wide scalar values. Preserve the current geographic-state architecture while preventing environmental effects from becoming unrealistically global.
-
-#### P2-B21 — Detection probability semantics
-**Status: ACTIVE / DEFERRED**
-
-The current detection implementation produces a value named `probability` but uses it as a threshold rather than performing a probability draw. Decide whether the value is a deterministic detection/confidence score or a seeded probability and align naming, semantics, tests, and RNG policy accordingly.
-
-#### P2-B22 — Combined-arms input integration
-**Status: ACTIVE / DEFERRED**
-
-The WW2 combat contract accepts artillery, armor, anti-armor, air, maneuver, and command effects, but the current generic WW2 integration supplies zero for these support inputs. Connect real capabilities/effects when the historical model requires them and keep those effects era-owned.
-
-#### P2-B23 — Equipment-loss model audit
-**Status: ACTIVE / DEFERRED**
-
-The current WW2 combat model derives equipment losses from a fixed personnel-loss ratio. Replace or explicitly validate this placeholder against the canonical equipment-instance model so equipment losses are not double-accounted or detached from equipment type, status, and combat effects.
-
-#### P2-B24 — Unit-state causal-loop audit
-**Status: ACTIVE / DEFERRED**
-
-Audit morale, cohesion, experience, training, readiness, fatigue, wear, logistics, intelligence, and related state variables for complete causal and recovery loops. Distinguish functioning simulation mechanisms from static modifiers or placeholders.
-
-#### P2-B25 — Simulation API semantic equivalence
-**Status: ACTIVE / DEFERRED**
-
-Document and test the intended semantic relationship between direct `simulateTurn()` and session-based `advanceSimulation()`, including baseline/status behavior, so different public entry points cannot silently produce unexpected differences.
-
-### P2-B26 — Headless DWST / interface independence architecture
-**Status: ACTIVE / DESIGN REQUIREMENT — DEFERRED IMPLEMENTATION**
-
-DWST must remain independently usable as a simulation engine without requiring ORBAT Mapper for simulation correctness, state authority, turn resolution, or reporting. ORBAT Mapper remains one optional visualization/presentation adapter.
-
-The architecture must support at least these independent consumption modes without duplicating simulation logic:
-
-1. **Map mode:** DWST canonical state and events are projected into ORBAT Mapper for geographic visualization.
-2. **Headless/text mode:** DWST runs without a map UI and exposes structured state, events, orders, and after-action results suitable for a textual report or conversational interface.
-3. **Programmatic/API mode:** an external client can submit validated DWST orders and consume deterministic simulation results without importing UI-specific code.
-4. **Future visualization adapters:** other map or UI implementations can consume the same canonical state/event/read-model contracts without becoming simulation authorities.
-
-Boundary requirements:
-- The simulation kernel must never depend on Vue, ORBAT Mapper UI components, map rendering, browser state, or conversational/LLM logic.
-- A text/AI interface may interpret human language into validated DWST orders and explain returned DWST results, but it must never invent simulation outcomes or become an alternate simulation authority.
-- The canonical state, ruleset, turn resolver, event/AAR output, deterministic seed/state, and command log remain DWST-owned.
-- Human-readable reporting must be generated from actual DWST results/state/events, not from narrative assumptions outside the engine.
-- The interface layer must be replaceable: ORBAT Mapper and a conversational interface are consumers/adapters, not dependencies of the simulation kernel.
-- Headless operation must be covered by automated tests that run the kernel without the ORBAT Mapper/UI layer.
-
-This requirement does **not** require building the conversational interface now. It establishes the architectural boundary so that the current ORBAT Mapper implementation does not prevent independent/headless DWST use later.
-
-## Phase-2 completion gates
-
-Phase 2 is **NOT COMPLETE** merely because S27 is closed. Before Phase 2 can be declared complete, all active backlog items above must either be implemented and tested or explicitly reclassified with a documented reason, and the following gates must pass:
-
-- one authoritative simulation state;
-- separate authoritative personnel, crew, and equipment accounting;
-- no implicit personnel/equipment replacement;
-- no direct authoritative mutation inside combat resolution;
-- exactly one equipment-loss accounting path per resolution;
-- deterministic state + orders + ruleset + seed behavior;
-- reproducible AAR/replay from initial state + ordered command log;
-- independently validated combat mathematics;
-- explicit sustainment/resource deltas;
-- historical provenance/model assumptions distinguishable;
-- ORBAT Mapper remains an adapter/presentation layer;
-- DWST can execute the simulation kernel headlessly without ORBAT Mapper/UI dependencies;
-- structured state/event/AAR outputs are sufficient for a non-map reporting client;
-- a conversational/AI interface, if added, remains an order/report adapter and never becomes simulation authority.
-
-The deferred independent-audit findings P2-B12 through P2-B25 and the headless-independence requirement P2-B26 are also active completion requirements unless explicitly reclassified after direct verification. They must not be treated as optional cleanup merely because they were discovered after the original Phase-2 backlog was written.
-
-## Current execution position
-
-**Phase 2: IN PROGRESS.**
-
-Current stage: **Stage 3 — Canonical accounting, deterministic resolution, and production gates.**
-
-Completed tracked milestones: S18, S20, S21, S23, S33, **S27**.
-
-Active implementation: **Next Phase-2 backlog item to be selected after direct repository inspection; S27 is closed.**
-
-Additional active backlog: **P2-B01 through P2-B26**. P2-B12 through P2-B25 were promoted from the independent direct repository audit and are intentionally deferred until the critical-path dependency chain is sufficiently advanced. P2-B26 establishes the independent/headless DWST architecture as a design requirement and is likewise deferred from immediate implementation.
-
-The phase therefore has substantial work remaining even though S27 is now complete. The promoted backlog will be audited/closed in dependency order rather than treated as optional cleanup.
-
-## Historical / audit record
-
-The Architectural Blueprint/Audit Map and older architecture/refactor-gate documents remain discovery and historical artifacts. Their unresolved requirements have been promoted into this master plan rather than discarded. Findings discovered through those audits must be incorporated into the appropriate phase/item before implementation.
-
-## Latest S27 execution record
-
-- S27-A implementation commit: `dc897ab290ec863cd6d8b424aedca05072ce7a47`.
-- S27-A focused-test commit: `efce9936d4bbf816ad38fc863db201728a8b5e93`.
-- S27-A uses explicit canonical record IDs and dispositions; it does not invent casualty allocation.
-- S27-B implementation commit: `7c95e6d3ef296f6f9e0522cb5b54dec3c887a`.
-- S27-B policy-input correction commit: `e5d23583e2b23fe9576a819397ac356ee0cb36e0`.
-- S27-B focused-test commit: `da5ca09bbf988d31cfb627033ab15525dbf26510`.
-- S27-B corrective implementation commit: `04834d1237a454bfb61a22f53b903fb45cf0e64b`.
-- S27-B validation: CI `33272533208` GREEN (user-confirmed).
-- S27-C implementation commit: `bd1c088948637f7587b9f35b032bc63c70e5a832`.
-- S27-C focused-test commit: `281885caf0125ad5e6e30e5c3a3555b651744d81`.
-- S27-C corrective test commit: `ab9f24c292967ba0cfb3b470f8dbf1b51f488092`.
-- S27-C validation: CI `33273631899` GREEN (user-confirmed).
-- S27-D implementation commit: `7db12351ff4d4eb65bb3f70a0f10b6e7cbd4a240`.
-- S27-D regression test commit: `0cd0eec152c6cd8f54b7a6243935d09d28310556`.
-- S27-D validation: CI `33274053508` GREEN (user-confirmed); CI `33274063460` GREEN (user-confirmed).
-- S27 completion audit: S27-A through S27-D were reviewed as a coherent canonical resource-accounting chain; S27 is CLOSED.
+1. Read this plan from the current authoritative branch.
+2. Inspect the current repository implementation and tests directly.
+3. Establish the exact acceptance criteria and dependencies.
+4. Obtain explicit authorization before changing code.
+5. Make the smallest safe implementation.
+6. Test the affected behavior and inspect CI results.
+7. Re-audit the changed boundary for regressions and unintended authority paths.
+8. Update this plan only after the implementation status is actually verified, using Rule 23.
+9. Never claim a task is complete when evidence is incomplete.
