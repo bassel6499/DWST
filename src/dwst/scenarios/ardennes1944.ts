@@ -32,4 +32,8 @@ export const ardennes1944: ScenarioState = {
     'a-10ad': unit({ id: 'a-10ad', name: '10th Armored Division', side: 'allied', echelon: 'division', personnel: 15000, equipment: 230, ammunition: 0.80, fuel: 0.74, readiness: 0.82, training: 0.80, experience: 0.78, morale: 0.80, cohesion: 0.82, fatigue: 0.11, wear: 0.15, logistics: 0.76, commandQuality: 0.80, intelligence: 0.66, combatPower: 0, position: { lon: 5.55, lat: 49.95 } }),
   },
   events: [],
+  locations: [
+    // Bastogne coordinates independently verified from geographic reference data.
+    { id: 'bastogne', name: 'Bastogne', position: { lon: 5.71844, lat: 50.003472 } },
+  ],
 };
