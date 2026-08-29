@@ -1,14 +1,41 @@
 import { describe, expect, it } from 'vitest';
-import { advanceSimulation, startSimulation } from './simulationSession';
+import { advanceCanonicalSimulation, startCanonicalSimulation } from './canonicalSimulationSession';
+import type { CanonicalState } from './canonicalState';
+import type { CombatAllocationPolicy } from './canonicalCombatAllocation';
 import { resolveOrderDestination } from './scenarioLocations';
 import { parseNaturalLanguageOrder } from './orderProcessor';
 import { geographicDistanceMeters } from './geographicMovement';
 import { ardennes1944 } from '../scenarios/ardennes1944';
 
-const scenario = () => ({
-  ...ardennes1944,
-  units: Object.fromEntries(Object.entries(ardennes1944.units).slice(0, 1)),
-  events: [],
+const policy: CombatAllocationPolicy = {
+  personnelDisposition: 'killed',
+  equipmentDisposition: 'destroyed',
+  eligiblePersonnelStatuses: ['assigned'],
+  eligibleEquipmentStatuses: ['operational'],
+  selection: 'stable-id',
+};
+
+const scenario = () => {
+  const base = {
+    ...ardennes1944,
+    units: Object.fromEntries(Object.entries(ardennes1944.units).slice(0, 1)),
+    events: [],
+  };
+  const unit = Object.values(base.units)[0];
+  return {
+    ...base,
+    units: {
+      [unit.id]: { ...unit, personnel: 0, equipment: 0, ammunition: 1, fuel: 1 },
+    },
+  };
+};
+
+const canonical = (unitId: string): CanonicalState => ({
+  personnel: { personnel: [] },
+  equipment: [],
+  crewAssignments: [],
+  equipmentDefinitions: [],
+  consumables: [{ unitId, ammunition: 1, fuel: 1 }],
 });
 
 describe('live movement-order integration', () => {
@@ -23,14 +50,14 @@ describe('live movement-order integration', () => {
     expect(bastogne).toBeDefined();
     expect(resolved.destination).toEqual(bastogne!.position);
 
-    const session = startSimulation({
+    const session = startCanonicalSimulation({
       ...state,
       units: {
         [unit.id]: { ...unit, order: resolved },
       },
-    });
+    }, canonical(unit.id));
 
-    const result = advanceSimulation(session);
+    const result = advanceCanonicalSimulation(session, policy);
     const moved = result.session.state.units[unit.id];
 
     expect(moved.position).not.toEqual(unit.position);
