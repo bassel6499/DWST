@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { advanceSimulation, startSimulation } from './simulationSession';
 import { resolveOrderDestination } from './scenarioLocations';
 import { parseNaturalLanguageOrder } from './orderProcessor';
+import { geographicDistanceMeters } from './geographicMovement';
 import { ardennes1944 } from '../scenarios/ardennes1944';
 
 const scenario = () => ({
@@ -33,8 +34,9 @@ describe('live movement-order integration', () => {
     const moved = result.session.state.units[unit.id];
 
     expect(moved.position).not.toEqual(unit.position);
-    expect(moved.position.lat).toBeGreaterThan(unit.position.lat);
-    expect(moved.position.lat).toBeLessThan(resolved.destination!.lat);
+    expect(geographicDistanceMeters(moved.position, resolved.destination!)).toBeLessThan(
+      geographicDistanceMeters(unit.position, resolved.destination!),
+    );
     expect(result.report.events.some((event) => event.phase === 'movement' && event.unitIds.includes(unit.id))).toBe(true);
   });
 
