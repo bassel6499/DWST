@@ -110,7 +110,7 @@ This definition takes precedence over implementation convenience and must be pre
 
 | ID | Finding | Status | Closure requirement |
 |---|---|---|---|
-| P2-S20 | Two simulation-session paths coexist | OPEN | The production/UI path must use the canonical resource-aware session, or the two session models must be formally unified. No live UI path may bypass canonical resource authority. |
+| P2-S20 | Two simulation-session paths coexist | CLOSED | The legacy `simulationSession.ts` path and its obsolete test were removed; remaining live consumers, including the UI and live-order simulation test, were migrated to the canonical resource-aware session. Direct repository search shows no remaining legacy `simulationSession` references, and post-migration CI is green. |
 | P2-S21 | Canonical resource authority is incomplete | CLOSED | Canonical authority/reconciliation now covers ammunition and fuel in addition to personnel and equipment; canonical projection and live canonical-session commit are verified, with CI green. Actual ammunition consumption/recovery semantics remain a downstream logistics/sustainment concern and are tracked under B11 rather than being folded into S21. |
 | P2-S22 | Legacy pool-based equipment/crew model remains structurally live | OPEN | Remove or quarantine the `EquipmentPool`/`CrewPool` model and migrate all operational consumers to canonical equipment instances/personnel assignments. There must be one equipment/crew accounting architecture. |
 | P2-S23 | Two competing canonical resource representations exist | OPEN | Unify `CanonicalState` record-level authority with the separate `CanonicalResourceLedger` model, or explicitly designate one as non-authoritative compatibility data and remove its authority-bearing APIs. |
