@@ -16,9 +16,11 @@ describe('live movement-order integration', () => {
     const unit = Object.values(state.units)[0];
     const parsed = parseNaturalLanguageOrder('move toward Bastogne', unit);
     const resolved = resolveOrderDestination(state, parsed.order);
+    const bastogne = state.locations?.[0];
 
     expect(parsed.order.objective).toBe('Bastogne');
-    expect(resolved.destination).toEqual(ardennes1944.locations[0].position);
+    expect(bastogne).toBeDefined();
+    expect(resolved.destination).toEqual(bastogne!.position);
 
     const session = startSimulation({
       ...state,
