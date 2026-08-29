@@ -19,6 +19,10 @@ const state: CanonicalState = {
   ],
   crewAssignments: [],
   equipmentDefinitions: [],
+  consumables: [
+    { unitId: 'u1', ammunition: 1, fuel: 1 },
+    { unitId: 'u2', ammunition: 1, fuel: 1 },
+  ],
 };
 
 const policy = {
