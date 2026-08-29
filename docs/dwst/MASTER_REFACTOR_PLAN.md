@@ -45,7 +45,7 @@ Refactor DWST into a deterministic, testable, era-aware simulation engine with e
 
 | ID | Finding | Status | Closure requirement |
 |---|---|---|---|
-| P2-S1 | Two operational turn-resolution models | OPEN | Prove the canonical turn path is authoritative and obsolete resolver consumers are removed or explicitly justified. |
+| P2-S1 | Two operational turn-resolution models | CLOSED | Canonical `resolveTurn()` is the sole current operational turn-resolution path; no obsolete `resolveUnifiedTurn` implementation or consumer remains in the current tree. |
 | P2-S2 | Duplicate spatial representations | CLOSED | `WorldPosition` is the sole physical-location authority in current operational state and movement. |
 | P2-S3 | Duplicate detection implementations | CLOSED | Canonical `detectContacts()` is the operational detection implementation; no competing implementation remains in use. |
 | P2-S4 | No verified x/y → geographic conversion | SATISFIED CONSTRAINT | Do not invent a conversion; geographic state remains authoritative. |
