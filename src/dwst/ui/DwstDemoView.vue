@@ -1,10 +1,20 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import DwstCommandPanel from './DwstCommandPanel.vue';
-import { advanceSimulation, startSimulation } from '@/dwst/core/simulationSession';
+import { advanceCanonicalSimulation, startCanonicalSimulation } from '@/dwst/core/canonicalSimulationSession';
+import type { CanonicalState } from '@/dwst/core/canonicalState';
+import type { CombatAllocationPolicy } from '@/dwst/core/canonicalCombatAllocation';
 import { resolveOrderDestination } from '@/dwst/core/scenarioLocations';
 import { ardennes1944 } from '@/dwst/scenarios/ardennes1944';
 import type { Order, UnitState } from '@/dwst/core/types';
+
+const policy: CombatAllocationPolicy = {
+  personnelDisposition: 'killed',
+  equipmentDisposition: 'destroyed',
+  eligiblePersonnelStatuses: ['assigned'],
+  eligibleEquipmentStatuses: ['operational'],
+  selection: 'stable-id',
+};
 
 const makeUnit = (id: string, name: string, side: UnitState['side'], lon: number, lat: number): UnitState => ({
   id, name, side, echelon: 'division', personnel: 10000, equipment: 250, ammunition: 0.85, fuel: 0.85,
@@ -13,8 +23,8 @@ const makeUnit = (id: string, name: string, side: UnitState['side'], lon: number
   status: 'operational', position: { lon, lat }, cumulativeLosses: 0, history: [],
 });
 
-const session = ref(startSimulation({
-  id: 'ardennes-1944-demo', name: 'Ardennes 1944 — Operational Prototype', era: 'ww2', scale: 'operational', turnHours: 6,
+const scenario = {
+  id: 'ardennes-1944-demo', name: 'Ardennes 1944 — Operational Prototype', era: 'ww2' as const, scale: 'operational' as const, turnHours: 6,
   elapsedHours: 0, weather: 1, terrain: 1, intelLevel: 0.7,
   units: {
     'de-2pz': makeUnit('de-2pz', '2nd Panzer Division', 'enemy', 5.8, 50.05),
@@ -22,8 +32,34 @@ const session = ref(startSimulation({
     'us-101': makeUnit('us-101', '101st Airborne Division', 'allied', 5.72, 50.0),
     'us-4arm': makeUnit('us-4arm', '4th Armored Division', 'allied', 5.55, 49.85),
   }, events: [], locations: ardennes1944.locations,
-}));
+};
 
+const canonical: CanonicalState = {
+  personnel: {
+    personnel: Object.values(scenario.units).flatMap((unit) => Array.from({ length: unit.personnel }, (_, index) => ({
+      id: `${unit.id}-p-${index}`,
+      unitId: unit.id,
+      status: 'assigned' as const,
+      qualifications: [],
+      experience: {},
+    }))),
+  },
+  equipment: Object.values(scenario.units).flatMap((unit) => Array.from({ length: unit.equipment }, (_, index) => ({
+    instanceId: `${unit.id}-e-${index}`,
+    definitionId: 'demo-equipment',
+    unitId: unit.id,
+    status: 'operational' as const,
+  }))),
+  crewAssignments: [],
+  equipmentDefinitions: [],
+  consumables: Object.values(scenario.units).map((unit) => ({
+    unitId: unit.id,
+    ammunition: unit.ammunition,
+    fuel: unit.fuel,
+  })),
+};
+
+const session = ref(startCanonicalSimulation(scenario, canonical));
 const state = computed(() => session.value.state);
 const units = computed(() => Object.values(state.value.units));
 const report = ref<string[]>(['Scenario initialized. Issue an order to begin.']);
@@ -58,7 +94,7 @@ function setTurnHours(turnHours: number) {
 }
 
 function advance() {
-  const result = advanceSimulation(session.value);
+  const result = advanceCanonicalSimulation(session.value, policy);
   session.value = result.session;
   const combatEvents = result.report.events.filter(event => event.phase === 'combat');
   report.value.unshift(
