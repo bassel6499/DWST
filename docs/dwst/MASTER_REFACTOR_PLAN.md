@@ -107,7 +107,7 @@ Permanent constraint: do not merge the application scenario-store geography into
 ### Stage 3 — Canonical accounting, deterministic resolution, and production gates
 
 ### P2-S27 — canonical personnel/equipment commit bridge
-**Status: ACTIVE — S27-A IMPLEMENTED; S27-B/C/D REMAIN**
+**Status: ACTIVE — S27-A IMPLEMENTED; S27-B IMPLEMENTED / CI PENDING; S27-C/D REMAIN**
 
 `CanonicalState` is the authoritative resource state containing personnel, equipment, crew assignments, and equipment definitions. The projection layer treats these records as authoritative while `UnitState` is a derived aggregate. The live `SimulationSession` currently carries `ScenarioState`, baseline, and rules but not `CanonicalState`.
 
@@ -125,9 +125,20 @@ Focused tests were added in `src/dwst/core/canonicalCombatCommit.test.ts`, cover
 Test commit: `efce9936d4bbf816ad38fc863db201728a8b5e93`.
 
 #### S27-B — deterministic casualty/resource allocation
-**Status: ACTIVE**
+**Status: IMPLEMENTED / CI PENDING**
 
-Define how an aggregate combat result becomes an explicit canonical allocation without embedding WW2-specific casualty assumptions in the generic bridge. The allocation policy must be deterministic and inspectable.
+Added `src/dwst/core/canonicalCombatAllocation.ts` and focused tests in `src/dwst/core/canonicalCombatAllocation.test.ts`.
+
+The generic allocator converts aggregate personnel/equipment loss counts into explicit canonical IDs using an explicit `CombatAllocationPolicy`. It requires the source unit, explicit eligible personnel/equipment statuses, explicit dispositions, and an explicit `stable-id` selection policy. Candidates are restricted to the specified unit, sorted by canonical ID, and selected deterministically. It rejects negative/non-integer loss counts and requests exceeding eligible resources.
+
+This is intentionally an accounting allocation policy, not a WW2 casualty model. It does not invent historical casualty distributions or infer dispositions. A future era-specific policy can replace the generic selection policy without changing the canonical commit contract.
+
+Implementation commits:
+- `7c95e6d3ef296f6f9ef9e0522cb5b54dec3c887a` — initial S27-B allocator.
+- `e5d23583e2b23fe9576a819397ac356ee0cb36e0` — readonly policy-input type correction.
+- `da5ca09bbf988d31cfb627033ab15525dbf26510` — S27-B focused tests.
+
+Validation status: no CI workflow run or commit status is currently available for the latest S27-B commit, so S27-B is not marked green/closed.
 
 #### S27-C — canonical-to-unit projection reconciliation
 **Status: ACTIVE**
@@ -338,4 +349,7 @@ The Architectural Blueprint/Audit Map and older architecture/refactor-gate docum
 - S27-A implementation commit: `dc897ab290ec863cd6d8b424aedca05072ce7a47`.
 - S27-A focused-test commit: `efce9936d4bbf816ad38fc863db201728a8b5e93`.
 - S27-A uses explicit canonical record IDs and dispositions; it does not invent casualty allocation.
-- The focused test suite must pass CI before S27-A is marked validated.
+- S27-B implementation commit: `7c95e6d3ef296f6f9ef9e0522cb5b54dec3c887a`.
+- S27-B policy-input correction commit: `e5d23583e2b23fe9576a819397ac356ee0cb36e0`.
+- S27-B focused-test commit: `da5ca09bbf988d31cfb627033ab15525dbf26510`.
+- The latest S27-B commit currently has no reported CI workflow run/status, so S27-B remains CI pending and is not closed.
