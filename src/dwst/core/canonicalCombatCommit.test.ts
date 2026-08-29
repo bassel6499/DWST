@@ -14,6 +14,7 @@ const state: CanonicalState = {
   ],
   crewAssignments: [],
   equipmentDefinitions: [],
+  consumables: [{ unitId: 'u1', ammunition: 1, fuel: 1 }],
 };
 
 describe('canonical combat commit', () => {
