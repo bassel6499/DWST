@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue';
 import DwstCommandPanel from './DwstCommandPanel.vue';
 import { advanceSimulation, startSimulation } from '@/dwst/core/simulationSession';
+import { resolveOrderDestination } from '@/dwst/core/scenarioLocations';
+import { ardennes1944 } from '@/dwst/scenarios/ardennes1944';
 import type { Order, UnitState } from '@/dwst/core/types';
 
 const makeUnit = (id: string, name: string, side: UnitState['side'], lon: number, lat: number): UnitState => ({
@@ -12,14 +14,14 @@ const makeUnit = (id: string, name: string, side: UnitState['side'], lon: number
 });
 
 const session = ref(startSimulation({
-  id: 'ardennes-1944-demo', name: 'Ardennes 1944 — DWST Prototype', era: 'ww2', scale: 'operational', turnHours: 6,
+  id: 'ardennes-1944-demo', name: 'Ardennes 1944 — Operational Prototype', era: 'ww2', scale: 'operational', turnHours: 6,
   elapsedHours: 0, weather: 1, terrain: 1, intelLevel: 0.7,
   units: {
     'de-2pz': makeUnit('de-2pz', '2nd Panzer Division', 'enemy', 5.8, 50.05),
     'de-pzlehr': makeUnit('de-pzlehr', 'Panzer Lehr Division', 'enemy', 5.9, 49.95),
     'us-101': makeUnit('us-101', '101st Airborne Division', 'allied', 5.72, 50.0),
     'us-4arm': makeUnit('us-4arm', '4th Armored Division', 'allied', 5.55, 49.85),
-  }, events: [],
+  }, events: [], locations: ardennes1944.locations,
 }));
 
 const state = computed(() => session.value.state);
@@ -30,17 +32,22 @@ const currentTurn = computed(() => Math.floor(state.value.elapsedHours / state.v
 function issueOrder(unitId: string, order: Order) {
   const unit = state.value.units[unitId];
   if (!unit) return;
+  const resolvedOrder = resolveOrderDestination(state.value, order);
+  if (resolvedOrder.objective && !resolvedOrder.destination && resolvedOrder.type === 'move') {
+    report.value.unshift(`${unit.name}: objective "${resolvedOrder.objective}" could not be resolved in this scenario; order not issued.`);
+    return;
+  }
   session.value = {
     ...session.value,
     state: {
       ...state.value,
       units: {
         ...state.value.units,
-        [unitId]: { ...unit, order },
+        [unitId]: { ...unit, order: resolvedOrder },
       },
     },
   };
-  report.value.unshift(`${unit.name}: ${order.type.toUpperCase()}${order.objective ? ` → ${order.objective}` : ''} (${order.posture ?? 'normal'}).`);
+  report.value.unshift(`${unit.name}: ${resolvedOrder.type.toUpperCase()}${resolvedOrder.objective ? ` → ${resolvedOrder.objective}` : ''}${resolvedOrder.destination ? ' [destination resolved]' : ''} (${resolvedOrder.posture ?? 'normal'}).`);
 }
 
 function setTurnHours(turnHours: number) {
@@ -71,7 +78,7 @@ function advance() {
         <article v-for="unit in units" :key="unit.id" class="unit" :class="unit.side">
           <div><b>{{ unit.name }}</b><small>{{ unit.side }} · {{ unit.status }}</small></div>
           <div class="stats">Personnel {{ unit.personnel.toLocaleString() }} · Ammo {{ Math.round(unit.ammunition*100) }}% · Fuel {{ Math.round(unit.fuel*100) }}% · Fatigue {{ Math.round(unit.fatigue*100) }}%</div>
-          <div v-if="unit.order" class="order">ORDER: {{ unit.order.type }} {{ unit.order.objective ? `→ ${unit.order.objective}` : '' }}</div>
+          <div v-if="unit.order" class="order">ORDER: {{ unit.order.type }} {{ unit.order.objective ? `→ ${unit.order.objective}` : '' }}{{ unit.order.destination ? ' [resolved]' : '' }}</div>
         </article>
         <h2>SITREP</h2>
         <div class="sitrep"><p v-for="(line, i) in report" :key="i">{{ line }}</p></div>
