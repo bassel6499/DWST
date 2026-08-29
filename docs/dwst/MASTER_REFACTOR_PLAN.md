@@ -261,6 +261,28 @@ Audit morale, cohesion, experience, training, readiness, fatigue, wear, logistic
 
 Document and test the intended semantic relationship between direct `simulateTurn()` and session-based `advanceSimulation()`, including baseline/status behavior, so different public entry points cannot silently produce unexpected differences.
 
+### P2-B26 — Headless DWST / interface independence architecture
+**Status: ACTIVE / DESIGN REQUIREMENT — DEFERRED IMPLEMENTATION
+
+DWST must remain independently usable as a simulation engine without requiring ORBAT Mapper for simulation correctness, state authority, turn resolution, or reporting. ORBAT Mapper remains one optional visualization/presentation adapter.
+
+The architecture must support at least these independent consumption modes without duplicating simulation logic:
+
+1. **Map mode:** DWST canonical state and events are projected into ORBAT Mapper for geographic visualization.
+2. **Headless/text mode:** DWST runs without a map UI and exposes structured state, events, orders, and after-action results suitable for a textual report or conversational interface.
+3. **Programmatic/API mode:** an external client can submit validated DWST orders and consume deterministic simulation results without importing UI-specific code.
+4. **Future visualization adapters:** other map or UI implementations can consume the same canonical state/event/read-model contracts without becoming simulation authorities.
+
+Boundary requirements:
+- The simulation kernel must never depend on Vue, ORBAT Mapper UI components, map rendering, browser state, or conversational/LLM logic.
+- A text/AI interface may interpret human language into validated DWST orders and explain returned DWST results, but it must never invent simulation outcomes or become an alternate simulation authority.
+- The canonical state, ruleset, turn resolver, event/AAR output, deterministic seed/state, and command log remain DWST-owned.
+- Human-readable reporting must be generated from actual DWST results/state/events, not from narrative assumptions outside the engine.
+- The interface layer must be replaceable: ORBAT Mapper and a conversational interface are consumers/adapters, not dependencies of the simulation kernel.
+- Headless operation must be covered by automated tests that run the kernel without the ORBAT Mapper/UI layer.
+
+This requirement does **not** require building the conversational interface now. It establishes the architectural boundary so that the current ORBAT Mapper implementation does not prevent independent/headless DWST use later.
+
 ## Phase-2 completion gates
 
 Phase 2 is **NOT COMPLETE** merely because S27 is closed. Before Phase 2 can be declared complete, all active backlog items above must either be implemented and tested or explicitly reclassified with a documented reason, and the following gates must pass:
@@ -275,9 +297,12 @@ Phase 2 is **NOT COMPLETE** merely because S27 is closed. Before Phase 2 can be 
 - independently validated combat mathematics;
 - explicit sustainment/resource deltas;
 - historical provenance/model assumptions distinguishable;
-- ORBAT Mapper remains an adapter/presentation layer.
+- ORBAT Mapper remains an adapter/presentation layer;
+- DWST can execute the simulation kernel headlessly without ORBAT Mapper/UI dependencies;
+- structured state/event/AAR outputs are sufficient for a non-map reporting client;
+- a conversational/AI interface, if added, remains an order/report adapter and never becomes simulation authority.
 
-The deferred independent-audit findings P2-B12 through P2-B25 are also active completion requirements unless explicitly reclassified after direct verification. They must not be treated as optional cleanup merely because they were discovered after the original Phase-2 backlog was written.
+The deferred independent-audit findings P2-B12 through P2-B25 and the headless-independence requirement P2-B26 are also active completion requirements unless explicitly reclassified after direct verification. They must not be treated as optional cleanup merely because they were discovered after the original Phase-2 backlog was written.
 
 ## Current execution position
 
@@ -289,7 +314,7 @@ Completed tracked milestones: S18, S20, S21, S23, S33.
 
 Active implementation: **P2-S27-B**, following implementation of S27-A.
 
-Additional active backlog: **P2-B01 through P2-B25**. P2-B12 through P2-B25 were promoted from the independent direct repository audit and are intentionally deferred until the current critical-path S27 work and dependency chain are sufficiently advanced.
+Additional active backlog: **P2-B01 through P2-B26**. P2-B12 through P2-B25 were promoted from the independent direct repository audit and are intentionally deferred until the current critical-path S27 work and dependency chain are sufficiently advanced. P2-B26 establishes the independent/headless DWST architecture as a design requirement and is likewise deferred from immediate implementation.
 
 The phase therefore has substantial work remaining even though the original six milestone items have mostly been completed. S27 remains the current critical-path item; the promoted backlog will be audited/closed in dependency order rather than treated as optional cleanup.
 
