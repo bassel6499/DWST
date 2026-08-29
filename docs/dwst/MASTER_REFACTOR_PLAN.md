@@ -1,6 +1,6 @@
 # DWST Master Refactor Plan
 
-> **Document role:** This is the authoritative refactor/work-plan document. It preserves the original long-term roadmap, all historical findings and completed work, and the current verified audit state. The Architectural Blueprint is a discovery/debugging map only; it is not a competing roadmap.
+> **Document role:** This is the authoritative refactor/work-plan document. It preserves the original long-term roadmap, all historical findings and completed work, and the current verified audit state. The Architectural Blueprint is a discovery/debugging map only; it is not a competing roadmap. It is the **single plan file**; operational synchronization state is maintained here so there is no second plan-state authority.
 
 ## 0. Governing rules
 
@@ -24,7 +24,10 @@
 18. **Plan synchronization is mandatory.** After each authorized implementation item and its validation, update this plan with the exact result before beginning the next implementation item. Plan-only restructuring may consolidate presentation, but must not erase historical records.
 19. **Preserve historical record.** When restructuring this document, retain the original roadmap, completed work, findings, dates, CI identifiers, architectural decisions, and rejected/removed legacy paths. Historical material may be reorganized or cross-referenced, but not silently discarded.
 20. **Whole-system distinction.** A module-level green test suite is not equivalent to an end-to-end simulation validation. The plan must distinguish source/architecture audit, unit tests, integration tests, UI-path tests, and whole-simulation behavioral validation.
-21. **Lossless plan-update protocol.** When this master plan must be synchronized, first obtain the complete current file from the current branch (prefer the Git blob by its exact SHA when a normal file read is truncated), preserve that complete text, make only the explicitly required documentation edits, and replace the file atomically using the current blob SHA. Never reconstruct the plan from a partial/truncated read, never replace it with a shortened summary, and never use search output as the document source. After the write, re-read the resulting file/blob and verify the preserved roadmap, historical records, active findings, statuses, CI identifiers, and new rules are present. If the complete source cannot be obtained, do not write the plan; resolve the retrieval problem first.
+21. **Single-file lossless synchronization protocol.** This file is the only authoritative plan. Before every plan write: read the current branch ref directly; obtain the complete current plan blob by exact SHA; preserve the complete document; make only the required documentation edits; replace the same file atomically using its current blob SHA; immediately re-read the resulting blob and verify that the long-term roadmap, historical records, active findings, statuses, CI identifiers, rules, and synchronization record remain present. Never reconstruct the plan from a partial/truncated read, never create a second plan-state file, and never use search output as the document source. If the complete blob or write operation is unavailable, do not advance implementation; resolve the repository-tooling problem first.
+22. **Single canonical plan location.** The sole plan file remains `docs/dwst/MASTER_REFACTOR_PLAN.md`. Do not create or recreate `PLAN_STATE.md`, a second master plan, or another competing plan ledger. The temporary `docs/dwst/plan/` migration attempt was discarded because it was incomplete; its data is not authoritative.
+23. **Every result is recorded before advancement.** Findings, implementation commits, failed CI, successful CI, user-confirmed CI, rejected approaches, deletions, and architecture decisions are recorded here before the next unrelated implementation item begins. A stale plan blocks advancement.
+24. **Direct-check-before-claim rule.** For every file/symbol/consumer/CI claim that can be checked directly, perform the direct repository/CI check in the current branch before reporting the claim. Do not substitute search summaries, remembered state, or prior chat claims when a direct check is available.
 
 ## 1. Long-term DWST roadmap — preserved project-level roadmap
 
@@ -37,7 +40,7 @@ This section preserves the original project roadmap as the forward-looking struc
 **Status: Substantially completed through the work leading into the current refactor.** Canonical state, scenario/turn boundaries, resource/personnel/equipment authority, and the core architectural foundation have been established; remaining defects discovered during the Phase 2 audit are tracked below rather than reopening Phase 1 generically.
 
 ### Phase 2 — Ruleset architecture + core architecture audit
-**Status: Active — whole-system audit/restructuring now in progress.** The earlier spatial/canonical-state cleanup items are substantially advanced, but the whole-system audit has now exposed additional integration, state-authority, simulation-path, and ruleset-completeness problems. These are recorded below and must be resolved or explicitly carried forward before Phase 2 can close.
+**Status: Active — whole-system audit/restructuring now in progress.** The earlier spatial/canonical-state cleanup items are substantially advanced, but the whole-system audit has exposed additional integration, state-authority, simulation-path, and ruleset-completeness problems. These are recorded below and must be resolved or explicitly carried forward before Phase 2 can close.
 
 ### Phase 3 — WW2 combat ruleset completion
 **Status: Future.** Complete and validate the WW2 ruleset as a selectable era/scenario implementation after the generic core is architecturally clean. WW2 remains an era implementation, never the generic engine model.
@@ -330,7 +333,7 @@ The following historical records are intentionally retained rather than rewritte
 **Status: Closed for the currently evidenced repository state.** The redundant legacy movement module was removed and post-deletion direct inspection plus user-confirmed green CI validated the resulting source state.
 
 #### P2-S22 — Master-plan state synchronization / roadmap separation
-**Status: Closed as a process/documentation control, and now superseded by the stronger Phase 2 restructuring in this revision.** Historical content remains preserved.
+**Status: Closed as a process/documentation control and superseded by the single-file synchronization rules in this revision.** Historical content remains preserved.
 
 ### 3.3 Newly confirmed whole-system findings — recorded before implementation
 
@@ -339,194 +342,164 @@ These findings were established during the whole-system audit of the current sou
 #### P2-S23 — Live UI movement order has no executable geographic destination
 **Severity: Critical functional integration defect.**
 
-**Direct evidence:** the command parser creates movement orders containing an `objective` such as `Bastogne`, while the engine movement resolver requires `unit.order.destination`. The live demo feeds the parsed order into the unit. Therefore the normal UI movement command can display an order without supplying the geographic destination required by the engine.
+**Resolution/implementation:** Added generic scenario-owned geographic locations and a resolver. Named objectives are resolved into canonical `Order.destination: WorldPosition`; explicit destinations are preserved; unknown objectives do not receive invented coordinates. The canonical movement engine was not duplicated or replaced. The live command-to-simulation path was covered by integration tests.
 
-**Required end state:** establish one canonical order representation for movement. A named objective must resolve through a verified scenario/objective registry or explicit geographic destination before the order enters simulation. No coordinates may be invented.
+**CI history:** initial integration-test commit `6f4ae00f08904940f78c8d04474e9fca97caa1c3` failed run `33255461370` because the test dereferenced an optional location. Correction commit `77c37f93592d23a35c629e9aac61362a76b68c30` fixed type-check, but CI run `33255660136` then failed because the test incorrectly assumed movement must increase latitude. The actual moved latitude was `50.05527054769334` versus initial `50.2`. This was a test-design defect, not evidence that geographic movement was wrong. The corrective commit `a4df75f97256a17d057de84670660638e5ec9f7b` now asserts that canonical geographic distance to the resolved destination decreases.
 
-**Dependencies:** scenario/objective representation; UI command parsing; engine order schema; movement tests; end-to-end UI test.
+**Status:** Open pending CI validation of `a4df75f97256a17d057de84670660638e5ec9f7b`.
 
-**Status:** Open — implementation not started.
-
-#### P2-S24 — UI turn-duration selector is disconnected from simulation state
+#### P2-S24 — UI turn-duration selector disconnected from simulation state
 **Severity: High functional integration defect.**
 
-**Direct evidence:** the command panel maintained `turnHours` locally for 1h/3h/6h/12h/24h choices, while the demo simulation state retained its own six-hour value and the live path did not transfer the selector value into `ScenarioState` before simulation.
+**Resolution:** The command panel now receives canonical `turnHours` and emits `update:turnHours`; the demo writes it into `session.state.turnHours`.
 
-**Resolution:** the command panel now receives the canonical `turnHours` value from the parent and emits `update:turnHours`; the demo writes that value immutably into `session.state.turnHours`. The live session therefore advances using the selected canonical duration rather than a disconnected local selector.
-
-**Validation:** final implementation commit `40d1506cd45f5f6785c95fa44a9d2d56d0b3baa1` was validated by the user's direct confirmation that CI run `33206531980` was green. The preceding commit `881020a739a4f29b33729d4c43c7d147b4b2ca8a` produced a temporary type-check failure in CI run `33206514848` because the child component prop contract had been changed before the parent was updated; the immediately following commit supplied the missing parent binding and the final state passed CI.
+**Validation:** final implementation commit `40d1506cd45f5f6785c95fa44a9d2d56d0b3baa1` was user-confirmed green in CI run `33206531980`. Intermediate commit `881020a739a4f29b33729d4c43c7d147b4b2ca8a` produced CI run `33206514848` red because the parent prop contract had not yet been updated; the final correction passed.
 
 **Status:** Closed / validated.
 
-#### P2-S25 — Live UI simulation bypasses the baseline/status assessment lifecycle
+#### P2-S25 — Live UI simulation bypassed the baseline/status assessment lifecycle
 **Severity: Critical simulation-integrity defect.**
 
-**Direct evidence:** the dedicated simulation-session path could call `resolveTurn(..., baseline)` and perform `assessUnit()`; the live demo previously called `simulateTurn()` without a baseline.
+**Resolution:** Live `DwstDemoView` was routed through `startSimulation()` and `advanceSimulation()` so `SimulationSession` owns the live baseline/ruleset lifecycle.
 
-**Resolution:** the live `DwstDemoView` was routed through `startSimulation()` and `advanceSimulation()`, making `SimulationSession` the canonical live simulation lifecycle while retaining `simulateTurn()` as a lower-level pure one-turn helper rather than deleting or duplicating it.
+**Validation:** implementation commit `84f1fe7e35020e374fd7e55f3e8e28a2ce02dd7d`; user-confirmed green CI run `33205394873`.
 
-**Validation:** implementation commit `84f1fe7e35020e374fd7e55f3e8e28a2ce02dd7d` was validated by the user's direct confirmation that CI run `33205394873` was green.
-
-**Status:** Closed / validated by P2-S37 correction.
+**Status:** Closed / validated by P2-S37.
 
 #### P2-S26 — Competing sustainment models and mutation-boundary violation
 **Severity: Critical architectural defect.**
 
-**Direct evidence:** `sustainment.ts` contains a dedicated sustainment calculation that directly mutates `UnitState`, while `engine.ts` contains separate inline fatigue/logistics/readiness/fuel behavior and does not invoke the dedicated sustainment model. The intended `resolveTurn()` → report → `applyTurn()` boundary is therefore not the sole sustainment path.
-
-**Required end state:** determine the canonical sustainment model; make its resolution pure; have `resolveTurn()` produce sustainment effects and `applyTurn()` apply them. Remove or explicitly demote redundant legacy behavior only after consumer tracing and focused regression tests.
+`engine.ts` contains inline fatigue/logistics/readiness/fuel behavior while `sustainment.ts` contains another model and directly mutates `UnitState`. Required end state: one canonical pure sustainment model feeding `resolveTurn()` and explicit `applyTurn()` mutation.
 
 **Status:** Open — architecture decision required before implementation.
 
 #### P2-S27 — Combat resource state is not demonstrated to commit to canonical personnel/equipment records
 **Severity: Critical architectural/state-authority defect.**
 
-**Direct evidence:** canonical state contains personnel/equipment records, but combat application directly subtracts personnel/equipment on `UnitState`. No demonstrated canonical personnel/equipment commit bridge was found in the audited combat path.
-
-**Required end state:** establish the authoritative ownership model. If canonical records are authoritative, combat resolution must produce explicit resource deltas and application must commit them through canonical transitions/projections rather than silently maintaining a second resource authority.
-
-**Dependencies:** canonical ledger/projection contracts; combat result schema; crew/equipment semantics; sustainment.
+Required end state: establish canonical authority and explicit resource deltas/commit semantics.
 
 **Status:** Open — architecture decision required before implementation.
 
 #### P2-S28 — WW2 combined-arms combat inputs are present in the API but currently hard-coded to zero
 **Severity: High ruleset-completeness defect.**
 
-**Direct evidence:** WW2 combat accepts artillery, armor, anti-armor, air support, maneuver, and command inputs, but the current `eraRules.ts` call supplies zero for each. The scenario combat implementation contains the factors, so the boundary exists but is not populated by the current runnable ruleset.
+Required end state: evidence-based WW2 inputs through selectable ruleset, or explicit staged-capability documentation; never restore WW2 assumptions to generic core.
 
-**Required end state:** define evidence-based WW2 sources/inputs and wire them through the selectable ruleset without leaking WW2 assumptions into generic core. If the product intentionally starts with zero values, document that as an explicit staged capability rather than implying the full model is active.
+**Status:** Open — primarily Phase 3.
 
-**Status:** Open — belongs primarily to Phase 3 after core architecture decisions are stable; do not solve by restoring WW2-specific generic-core modules.
-
-#### P2-S29 — Engine `combatPower` calculation is not consumed by the active WW2 combat law
+#### P2-S29 — Engine `combatPower` calculation is not consumed by active WW2 combat law
 **Severity: High model-coherence defect.**
 
-**Direct evidence:** the engine computes `effectiveCombatPower`, while the WW2 combat resolver independently computes quality from training, experience, readiness, morale, and cohesion and does not consume the engine's combat-power result.
+Required end state: one documented relationship between combat power and WW2 combat quality, or explicit demotion/removal of redundant metric.
 
-**Required end state:** determine whether `combatPower` is a canonical derived combat input, a legacy aggregate to remove, or a deliberately separate metric. There must be one documented relationship rather than two competing combat-strength concepts.
-
-**Status:** Open — architecture/model decision required; no implementation yet.
+**Status:** Open — architecture/model decision required.
 
 #### P2-S30 — Combat casualty application does not itself complete unit-status/state assessment
 **Severity: High simulation-integrity defect.**
 
-**Direct evidence:** combat application subtracts personnel/equipment and changes readiness but does not itself establish destroyed/disorganized state, history, or the full derived status. Status assessment exists separately and is conditional on baseline usage.
-
-**Required end state:** define a single post-combat state transition/assessment path so casualty effects, readiness, destruction/disorganization, and history cannot diverge between simulation entry points.
-
-**Dependencies:** P2-S25, P2-S27, unit assessment contract.
+Required end state: one post-combat state transition/assessment path.
 
 **Status:** Open.
 
 #### P2-S31 — Logistics supply accounting has inconsistent delivered/lost semantics
 **Severity: High functional defect.**
 
-**Direct evidence:** `resolveSupply()` first reduces effective capacity by interdiction, then calculates delivered from that reduced capacity and calculates lost again as `effectiveCapacity × interdiction`. For a capacity/request of 100 and interdiction of 50%, this yields 50 delivered and 25 lost, leaving 25 units unexplained.
-
-**Required end state:** define the physical/accounting meaning of interdiction and ensure requested = delivered + lost + explicitly documented residual/shortfall. Add boundary tests around 0%, 50%, 100%, over-capacity, and undersupply cases.
+Required end state: requested = delivered + lost + explicitly documented residual/shortfall, with boundary tests.
 
 **Status:** Open — implementation not started.
 
 #### P2-S32 — Scenario registry is not connected to the current runnable scenario set
 **Severity: High integration defect.**
 
-**Direct evidence:** the registry exposes registration/lookup/create functions but its internal registry is empty in the audited source. The demo constructs its scenario directly rather than resolving it through the registry.
-
-**Required end state:** establish one scenario-definition/registry authority and make the live application/session path use it, or explicitly document the registry as a future API and prevent it from being mistaken for the active path. No duplicate scenario authorities.
+Required end state: one scenario-definition/registry authority or explicit future-only scope.
 
 **Status:** Open — implementation not started.
 
 #### P2-S33 — Competing Ardennes scenario definitions exist
 **Severity: High scenario-authority defect.**
 
-**Direct evidence:** `ardenne-1944.ts` contains a prototype-style scenario with populated units/resources, while `ardenne1944.ts` defines a `ScenarioDefinition` whose initial state contains zero units. Their consumer relationship has not been proven equivalent.
+**Resolution:** Direct consumer/source inspection established the duplicate definitions were obsolete competing fixtures. `src/dwst/scenarios/ardenne-1944.ts` and `src/dwst/scenarios/ardenne1944.ts` were removed; populated `src/dwst/scenarios/ardennes1944.ts` remains. Both deletion CIs were user-confirmed green. Direct audit also established that the application's `scenariostore` geographic subsystem and DWST simulation scenario fixture are separate systems with no verified integration path. Do not couple them merely to resolve DWST objectives.
 
-**Required end state:** trace all consumers and decide which is canonical. Preserve historically useful data, migrate consumers if justified, and delete only after direct proof of zero required consumers. Do not merge by guessing.
-
-**Status:** Open — consumer audit required before implementation.
+**Status:** Closed / validated.
 
 #### P2-S34 — Map overlay is not on the actual DWST demo application path
 **Severity: High integration defect.**
 
-**Direct evidence:** `DwstMapOverlay.vue` exists and consumes the canonical GeoJSON projection, but the actual `DwstView` → `DwstDemoView` path does not render it.
-
-**Required end state:** determine the intended host/map integration contract. If the overlay is intended for the live DWST experience, connect it through the appropriate map boundary without creating a second map authority. If it is an integration component for another host, document that ownership and test the integration separately.
+Required end state: determine host/map integration contract without creating a second map authority. ORBAT Mapper remains responsible for map rendering/projection/conversion.
 
 **Status:** Open — architecture/integration decision required.
 
 #### P2-S35 — Whole-system/UI test coverage does not exercise the live application path
 **Severity: High validation gap.**
 
-**Direct evidence:** core unit tests cover substantial architectural behavior, but the audited DWST UI directory does not demonstrate equivalent component/end-to-end coverage for the command panel, live simulation controls, movement command translation, map integration, or full turn lifecycle.
+Required end state: scenario load → command creation → order resolution → simulation → state update → report/UI/map presentation on the real user path.
 
-**Required end state:** create a validation layer that exercises the real user-facing path: scenario load → command creation → order resolution → simulation → state update → report/UI/map presentation. Tests must assert behavior, not just rendering.
-
-**Status:** Open — validation design required. This finding should be coordinated with P2-S23 through P2-S34 rather than solved by adding superficial tests before the underlying contracts are fixed.
+**Status:** Open — validation design required.
 
 #### P2-S36 — Reinforcement/reconstitution/training helpers require explicit mutation-boundary classification
 **Severity: Medium architectural consistency defect.**
 
-**Direct evidence:** reinforcement, reconstitution, and training modules directly mutate their supplied state/objects, while the intended turn architecture separates pure resolution from application. Their current consumers and whether they are active simulation-path modules need to be established.
-
-**Required end state:** classify each helper as pure calculation, explicit state transition, or legacy/inactive surface; migrate active simulation behavior to the canonical transition boundary where appropriate.
+Required end state: classify each helper as pure calculation, explicit transition, or legacy/inactive surface and migrate active behavior to the canonical transition boundary.
 
 **Status:** Open — consumer audit required.
 
 #### P2-S37 — Active simulation path and auxiliary simulation modules are not yet proven to have one behavioral contract
 **Severity: High architectural/integration defect.**
 
-**Direct evidence:** the repository contained `simulationSession.ts`, `simulationBaseline.ts`, `engine.ts`, sustainment/logistics helpers, order processing, and UI-driven simulation. The audit found differences in baseline handling and sustainment integration.
+**Resolution:** live `DwstDemoView` was routed through `SimulationSession` using `startSimulation()` and `advanceSimulation()`. `simulateTurn()` remains a lower-level pure one-turn helper rather than a second live lifecycle.
 
-**Resolution:** the live `DwstDemoView` was routed through the canonical `SimulationSession` lifecycle using `startSimulation()` and `advanceSimulation()`. `SimulationSession` now supplies the live path's preserved T0 baseline and fixed ruleset semantics. `simulateTurn()` remains a lower-level pure one-turn helper rather than a second live lifecycle.
-
-**Validation:** implementation commit `84f1fe7e35020e374fd7e55f3e8e28a2ce02dd7d` was validated by the user's direct confirmation that CI run `33205394873` was green.
+**Validation:** implementation commit `84f1fe7e35020e374fd7e55f3e8e28a2ce02dd7d`; user-confirmed green CI run `33205394873`.
 
 **Status:** Closed / validated.
 
-### 3.4 Dependency-aware execution order after restructuring
+### 3.4 Scenario/location architecture constraint
 
-The newly found issues are **not** to be fixed in discovery order. The order below prevents fixing downstream symptoms twice.
+The application's `scenariostore` geographic model and DWST simulation scenario model are separate systems with no verified integration path. Do not introduce an implicit dependency between them merely to resolve DWST objectives.
+
+DWST owns canonical `WorldPosition` and scenario-owned named geographic objectives. ORBAT Mapper remains the external map-display authority. The generic DWST location layer does not render maps, convert map coordinates, or replace ORBAT Mapper.
+
+### 3.5 Dependency-aware execution order after restructuring
 
 #### Stage A — Establish the canonical live simulation contract
-1. **P2-S37:** define/verify the one canonical live simulation entry path and contract. **Closed / validated.**
-2. **P2-S25:** reconcile UI simulation with session/baseline/status semantics. **Closed / validated by S37.**
-3. **P2-S24:** connect turn-duration selection to canonical simulation input. **Closed / validated.**
-4. **P2-S23:** fix movement-order destination/objective resolution against the canonical order contract. **Next active item.**
-5. Add focused integration tests for the live command → simulation path.
+1. P2-S37 — closed / validated.
+2. P2-S25 — closed / validated by S37.
+3. P2-S24 — closed / validated.
+4. P2-S23 — implementation complete; corrected integration test awaiting green CI.
+5. Close S23 only after CI and direct source re-inspection.
 
 #### Stage B — Re-establish canonical state mutation/resource authority
-6. **P2-S27:** resolve personnel/equipment canonical authority and combat commit semantics.
-7. **P2-S30:** consolidate post-combat casualty/status assessment.
-8. **P2-S26:** choose and consolidate the sustainment model while preserving the resolve/apply boundary.
-9. **P2-S36:** classify and migrate active reinforcement/reconstitution/training mutations.
-10. **P2-S31:** correct logistics accounting semantics and add boundary tests.
+6. P2-S27 — personnel/equipment canonical authority.
+7. P2-S30 — post-combat casualty/status assessment.
+8. P2-S26 — sustainment consolidation.
+9. P2-S36 — reinforcement/reconstitution/training mutation classification.
+10. P2-S31 — logistics accounting semantics and boundary tests.
 
 #### Stage C — Reconcile combat model/ruleset boundaries
-11. **P2-S29:** resolve the relationship between `effectiveCombatPower` and WW2 combat quality.
-12. **P2-S28:** complete or explicitly stage the WW2 combined-arms input model in the selectable WW2 ruleset. Do not move WW2 assumptions into generic core.
+11. P2-S29 — combat-power relationship.
+12. P2-S28 — WW2 combined-arms ruleset completion/staging.
 
 #### Stage D — Scenario and visualization integration
-13. **P2-S33:** audit and reconcile the competing Ardennes definitions.
-14. **P2-S32:** connect or formally scope the scenario registry.
-15. **P2-S34:** establish the actual map integration boundary and live overlay path.
+13. P2-S33 — closed; duplicate Ardennes definitions removed and scenario/scenariostore separation established.
+14. P2-S32 — scenario registry authority.
+15. P2-S34 — map integration boundary/live overlay.
 
 #### Stage E — Whole-system validation
-16. **P2-S35:** build end-to-end tests around the now-canonical live path.
+16. P2-S35 — end-to-end validation layer.
 17. Re-run direct repository audit for duplicate state authority, duplicate simulation paths, era leakage, coordinate systems, mutation boundaries, scenario authority, and map boundaries.
 18. Run CI as a gate; report running/waiting status explicitly; require completed result before closure.
 19. User performs manual CI verification where requested; record the result.
 20. Only after the above is clean may Phase 2 be considered for closure.
 
-### 3.5 Authorization rule for the new findings
+### 3.6 Authorization rule
 
-The findings above are **recorded, not authorized for implementation** unless their individual status/history explicitly records a completed authorized correction. Before each new implementation:
+The findings above are recorded, not automatically authorized. Before each new implementation:
 
-1. re-read the current source at the current branch head;
+1. re-read the current branch source;
 2. verify the finding still exists;
 3. verify no previous fix has already addressed it;
 4. identify all direct consumers and relevant tests;
 5. make the minimum justified change;
-6. run the relevant focused tests;
+6. run relevant focused tests;
 7. trigger/check CI;
 8. explicitly tell the user CI is running and wait for the result;
 9. independently re-inspect the architecture/source;
@@ -536,8 +509,8 @@ The findings above are **recorded, not authorized for implementation** unless th
 
 The new findings do **not** reorder or erase the original roadmap.
 
-- **Phase 3:** P2-S28 and P2-S29 may feed WW2 combat-ruleset completion once Phase 2 establishes the generic boundaries.
-- **Phase 4:** P2-S23 through P2-S25, P2-S30, P2-S32, P2-S34, and P2-S35 are prerequisites/inputs for a genuinely playable end-to-end simulation, but are being audited/fixed now where they are architectural prerequisites.
+- **Phase 3:** P2-S28 and P2-S29 may feed WW2 combat-ruleset completion once Phase 2 establishes generic boundaries.
+- **Phase 4:** P2-S23 through P2-S25, P2-S30, P2-S32, P2-S34, and P2-S35 are prerequisites/inputs for a genuinely playable end-to-end simulation.
 - **Phase 5:** P2-S34 informs host/map integration without changing ORBAT Mapper ownership.
 - **Phase 8:** P2-S26 and P2-S31 inform future full logistics/sustainment expansion.
 - **Phase 11:** P2-S35 and the final Phase 2 audit feed comprehensive validation; Phase 11 remains the broader final verification phase and must not be falsely marked complete by current CI.
@@ -567,7 +540,7 @@ The new findings do **not** reorder or erase the original roadmap.
 - 2026-08-28: P2-S22 established roadmap/refactor-plan separation and synchronization rules to prevent future plan drift or duplicate work.
 - 2026-08-28: Added explicit repository-source verification rules after GitHub code-search returned false negatives for symbols/files directly confirmed to exist in the current branch.
 - 2026-08-28: P2-S21 confirmed `src/dwst/core/movement.ts` was a legacy duplicate of the canonical geographic movement path; direct application/package/export/consumer inspection found no required dependency, so deletion was authorized and performed in commit `e372d8fc9bc9b330ec32830c2d3b3f5a5e5eddb5`.
-- 2026-08-28: Post-deletion direct inspection confirmed `movement.ts` was absent, `engine.ts` still used canonical geographic operations, and the final spatial sweep found no remaining characteristic remnants of the removed approximate implementation. The user manually confirmed the deletion CI run `remove legacy duplicate movement implementation` was green.
+- 2026-08-28: Post-deletion direct inspection confirmed `movement.ts` was absent, `engine.ts` still used canonical geographic operations, and the final spatial sweep found no remaining characteristic remnants of the removed approximate implementation.
 - 2026-08-28: P2-S21 closed for the currently evidenced repository state; future duplicate geographic-distance or antimeridian-unsafe simulation logic must be recorded as a new finding before implementation.
 - 2026-08-28: Whole-system audit identified P2-S23 through P2-S37. These are recorded before implementation and are dependency-ordered to prevent downstream fixes from masking or duplicating upstream architectural corrections.
 - 2026-08-28: Restructured the master plan while preserving the original long-term roadmap, historical findings, completed work, CI identifiers, architectural rules, and blueprint/audit-map distinction.
@@ -576,8 +549,49 @@ The new findings do **not** reorder or erase the original roadmap.
 - 2026-08-29: P2-S25 closed by the P2-S37 correction; no duplicate source fix was created.
 - 2026-08-29: P2-S24 turn-duration binding implemented in commits `881020a739a4f29b33729d4c43c7d147b4b2ca8a` and `40d1506cd45f5f6785c95fa44a9d2d56d0b3baa1`. User confirmed CI run `33206514848` red on the intermediate commit due to the expected parent-prop type-check gap, then CI run `33206531980` green on the final commit. The intermediate failure is retained as validation history, not an unresolved defect.
 - 2026-08-29: Added a lossless master-plan update protocol requiring complete blob retrieval by exact SHA, atomic full-document replacement, and post-write verification so future plan synchronization cannot rely on truncated reads or accidentally discard historical material.
+- 2026-08-29: Direct consumer/source audit established the two duplicate Ardennes scenario definitions were obsolete; `src/dwst/scenarios/ardenne-1944.ts` and `src/dwst/scenarios/ardenne1944.ts` were removed. Both deletion CIs were user-confirmed green. `src/dwst/scenarios/ardennes1944.ts` remains the surviving populated fixture.
+- 2026-08-29: Direct audit established the application `scenariostore` geographic subsystem and DWST simulation scenario fixture are separate systems with no verified integration path. This separation is now a permanent constraint on S23 and future scenario work.
+- 2026-08-29: P2-S23 generic scenario-location contract/resolver implemented and integrated into live order-to-simulation path. The canonical movement engine was not replaced or duplicated.
+- 2026-08-29: CI run `33255461370` failed on initial live integration-test commit `6f4ae00f08904940f78c8d04474e9fca97caa1c3` because the test dereferenced optional `locations` data. Correction `77c37f93592d23a35c629e9aac61362a76b68c30` made type-check pass but CI run `33255660136` failed the integration test because the test incorrectly assumed movement increases latitude. Actual movement was from latitude `50.2` to `50.05527054769334`.
+- 2026-08-29: Corrected integration assertion commit `a4df75f97256a17d057de84670660638e5ec9f7b` now tests decreasing canonical geographic distance to the resolved objective instead of an arbitrary latitude direction. CI validation is pending.
+- 2026-08-29: The separate `PLAN_STATE.md` ledger was found to duplicate plan authority and permit synchronization drift. Its synchronization rules, checkpoint data, and relevant current findings are absorbed into this master plan. The separate ledger is retired and must not be recreated.
+- 2026-08-29: A temporary `docs/dwst/plan/MASTER_REFACTOR_PLAN.md` migration file was created during restructuring but was discovered to be incomplete; it was deleted before becoming authoritative. No information from that incomplete file supersedes this plan. The authoritative plan remains this file, preserving the complete original roadmap/history and the absorbed ledger data.
+- 2026-08-29: CI run `33255660136` was directly inspected: type-check passed and 222 test files/1733 tests passed before the single live movement integration assertion failed. The failure is recorded as a test-design defect, not a generic movement-engine failure.
 
-## 6. Current authoritative status
+## 6. Unified operational synchronization record
+
+This section replaces the former separate `PLAN_STATE.md`. It is intentionally part of the authoritative master plan so there is exactly one source of truth.
+
+### Current repository checkpoint
+- Branch: `audit/canonical-state-refactor`
+- Directly verified branch head before this synchronization: `68170ea47f67cbd5a5fe1407670e73077224ed55`.
+- Complete source blob used for the pre-restructure master plan: `022643bca62ea4aad21b8a8dbb3a7bb3a9fb87ac`.
+- Prior master-plan synchronization commit: `18be637fdfb5b797748843ed4689a5d3fc54b68a`.
+- Corrected S23 test commit: `a4df75f97256a17d057de84670660638e5ec9f7b`.
+- Unified plan migration attempt was deliberately discarded because its generated file was incomplete; it never became authoritative.
+
+### Current verified implementation state
+- P2-S24: closed; user-confirmed green CI `33206531980`.
+- P2-S25: closed by P2-S37; user-confirmed green CI `33205394873`.
+- P2-S37: closed; user-confirmed green CI `33205394873`.
+- P2-S33: closed; duplicate Ardennes files removed; both deletion CIs user-confirmed green.
+- P2-S23: implementation complete; corrected integration test awaiting CI. Failed runs `33255461370` and `33255660136` are historical validation records, not ignored.
+
+### Permanent plan-maintenance protocol
+
+1. **Direct branch check:** read the current branch ref directly before every plan operation.
+2. **Exact complete source:** obtain the complete plan blob using its exact SHA. If a normal read is truncated, use the Git blob. Never reconstruct from search results or partial output.
+3. **Single authority:** modify only `docs/dwst/MASTER_REFACTOR_PLAN.md`. Never create a second ledger or second roadmap.
+4. **Preserve everything:** keep the original long-term roadmap, historical findings, dates, commits, CI identifiers, architecture decisions, rejected approaches, and removed legacy paths.
+5. **Minimal edit:** change only the sections required by the new result.
+6. **Atomic replacement:** update the file using its current blob SHA.
+7. **Immediate verification:** re-read the resulting blob and directly verify the updated finding/status/CI plus preservation of the roadmap/history/rules.
+8. **Record the synchronization checkpoint:** update Section 6 with the resulting plan commit/blob checkpoint as part of the same synchronization cycle when practical; otherwise the next plan sync must reconcile it before unrelated implementation.
+9. **CI is recorded exactly:** red, running, green, and user-confirmed green are distinct states. Never overwrite a failure with a later success; retain the failure as history.
+10. **Blocking rule:** if the plan cannot be safely synchronized, do not advance to an unrelated implementation item.
+11. **Direct-check rule:** whenever a claim can be checked directly, check it directly in the current branch/CI before reporting it.
+
+## 7. Current authoritative status
 
 ### Project roadmap
 **Phase 0:** Established  
@@ -586,11 +600,10 @@ The new findings do **not** reorder or erase the original roadmap.
 **Phase 3–15:** Future
 
 ### Refactor findings
-**Closed:** P2-S7, P2-S17, P2-S18, P2-S19, P2-S20, P2-S21, P2-S22, P2-S24, P2-S25, P2-S37  
-**Open:** P2-S23, P2-S26, P2-S27, P2-S28, P2-S29, P2-S30, P2-S31, P2-S32, P2-S33, P2-S34, P2-S35, P2-S36  
-**No new implementation is authorized merely by recording these findings.**
+**Closed:** P2-S7, P2-S17, P2-S18, P2-S19, P2-S20, P2-S21, P2-S22, P2-S24, P2-S25, P2-S33, P2-S37  
+**Open:** P2-S23, P2-S26, P2-S27, P2-S28, P2-S29, P2-S30, P2-S31, P2-S32, P2-S34, P2-S35, P2-S36  
 
 ### Immediate next work
-**Stage A, P2-S23:** fix movement-order destination/objective resolution against the canonical order contract. First re-read the current branch source and trace all direct consumers before changing anything.
+**P2-S23:** validate corrected live movement integration test commit `a4df75f97256a17d057de84670660638e5ec9f7b`. If green, directly re-inspect the implementation and close S23, then synchronize this document before moving to P2-S27.
 
-The original roadmap, historical findings, current audit findings, execution dependencies, and synchronization rules are intentionally retained in this document. This document is the current authoritative refactor/work-plan source.
+**The original roadmap, historical findings, current audit findings, execution dependencies, architectural blueprint, CI history, and plan-synchronization rules are intentionally retained in this one authoritative document.**
