@@ -28,6 +28,7 @@
 20. Presentation, UI, ORBAT Mapper, and future conversational/AI interfaces must never become alternate simulation authorities or contain authoritative simulation logic.
 21. Simulation-engine correctness and historical-data correctness are separate validation questions. Neither may be used to mask failure of the other.
 22. When a new conversation begins or the user says to return to the plan, the assistant must first perform a repository/plan state-recovery pass before proposing, implementing, or modifying anything. The recovery pass must establish the current branch, current master-plan version, active critical-path item, outstanding blockers, and relevant recent commits. No implementation changes may be made during this recovery pass.
+23. **Plan-update protocol is serialized and transactional:** before every plan edit, retrieve the current branch head and the complete current plan blob; use the exact current blob SHA as the concurrency guard; preserve the complete retrieved document and make only the authorized change; perform one write against that exact SHA; then re-fetch the resulting file/commit and verify the intended change and preservation of the plan. If the content is truncated, the SHA is stale/unknown, the write fails, or the result is ambiguous, stop and do not reconstruct from memory, create a parallel plan, retry against a stale SHA, or silently proceed. When the normal contents-file writer is unreliable, use the Git Data API sequence documented by GitHub—create blob, create tree from the verified current tree, create commit with the verified current HEAD as parent, update the branch ref, then re-fetch and verify—provided the required GitHub operations are available. citeturn0search2turn0search0
 
 ## Original roadmap preservation
 
@@ -374,7 +375,7 @@ The Architectural Blueprint/Audit Map and older architecture/refactor-gate docum
 - S27-A implementation commit: `dc897ab290ec863cd6d8b424aedca05072ce7a47`.
 - S27-A focused-test commit: `efce9936d4bbf816ad38fc863db201728a8b5e93`.
 - S27-A uses explicit canonical record IDs and dispositions; it does not invent casualty allocation.
-- S27-B implementation commit: `7c95e6d3ef296f6f9ef9e0522cb5b54dec3c887a`.
+- S27-B implementation commit: `7c95e6d3ef296f6f9e0522cb5b54dec3c887a`.
 - S27-B policy-input correction commit: `e5d23583e2b23fe9576a819397ac356ee0cb36e0`.
 - S27-B focused-test commit: `da5ca09bbf988d31cfb627033ab15525dbf26510`.
 - S27-B corrective implementation commit: `04834d1237a454bfb61a22f53b903fb45cf0e64b`.
