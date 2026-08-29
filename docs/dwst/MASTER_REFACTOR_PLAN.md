@@ -53,6 +53,23 @@ Refactor DWST into a deterministic, testable, era-aware simulation engine with e
 | P2-S6 | Legacy BattlefieldState remains live | CLOSED | Legacy battlefield state is no longer an operational authority. |
 | P2-S7 | Spatial consistency invariant | CLOSED | Geographic state and map/turn projection preserve the same authoritative position semantics. |
 
+### Additional whole-repository architectural findings
+
+| ID | Finding | Status | Closure requirement |
+|---|---|---|---|
+| P2-S20 | Two simulation-session paths coexist | OPEN | The production/UI path must use the canonical resource-aware session, or the two session models must be formally unified. No live UI path may bypass canonical resource authority. |
+| P2-S21 | Canonical resource authority is incomplete | OPEN | Extend canonical authority/reconciliation beyond personnel and equipment to every resource represented as authoritative simulation state, including ammunition and fuel, or explicitly redesign those fields as derived projections. |
+| P2-S22 | Legacy pool-based equipment/crew model remains structurally live | OPEN | Remove or quarantine the `EquipmentPool`/`CrewPool` model and migrate all operational consumers to canonical equipment instances/personnel assignments. There must be one equipment/crew accounting architecture. |
+| P2-S23 | Two competing canonical resource representations exist | OPEN | Unify `CanonicalState` record-level authority with the separate `CanonicalResourceLedger` model, or explicitly designate one as non-authoritative compatibility data and remove its authority-bearing APIs. |
+| P2-S24 | Era rulesets are mutable shared objects | OPEN | Make ruleset/configuration immutable or session-owned so one caller cannot mutate global `ERA_RULESETS` and silently alter another simulation. Determinism must include configuration isolation. |
+| P2-S25 | Replay provenance and command history are incomplete | OPEN | Persist an explicit ordered command journal plus ruleset/model version or content hash and any RNG state/seed required to reproduce a run. A state snapshot alone must be sufficient to identify the exact model used for replay. |
+| P2-S26 | DWST has no formal public module/API boundary | OPEN | Establish a stable DWST entry point/API separating simulation core from ORBAT Mapper internals; UI and future standalone/phone/reporting clients must not depend on deep internal file paths. |
+| P2-S27 | Canonical projection can silently suppress invalid crew-definition data | OPEN | Projection must surface invalid/missing crew requirements as explicit validation errors rather than swallowing exceptions and continuing with under-counted readiness. |
+| P2-S28 | Canonical resource deltas are inferred from aggregate before/after state | OPEN | Make resolution/application produce explicit typed resource deltas or canonical commits instead of reconstructing accounting changes by subtracting projected aggregate `UnitState` values. |
+| P2-S29 | Era capability contract is not enforced at simulation entry | OPEN | Starting a simulation must validate that the selected era is actually runnable, including required combat/rules implementations; unsupported eras must fail before partial simulation rather than only when combat is reached. |
+| P2-S30 | Architecture documentation has drifted from the current tree | OPEN | Reconcile `ARCHITECTURE_AUDIT.md`, resource-accounting documentation, notes, and the master plan with the actual current tree so removed modules are not documented as live and current duplicate models are not omitted. |
+| P2-S31 | Canonical personnel/equipment ownership is optional and ambiguous | OPEN | Define explicit ownership semantics for unassigned canonical records (unit, reserve, depot, pool, etc.) and enforce them. `unitId` must not be optional without a defined non-unit ownership model. |
+
 ### S27 — Canonical resource accounting bridge
 
 **Status: CLOSED**
