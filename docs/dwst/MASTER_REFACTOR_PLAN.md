@@ -187,6 +187,80 @@ Historical claims require provenance and must remain distinguishable from model 
 
 ORBAT Mapper remains presentation/import/export only. Verify that future map integration cannot modify simulation mathematics or become a source of combat truth.
 
+### Additional independent audit findings — deferred until current critical-path work is complete
+
+These findings were discovered by direct inspection of the current repository after the existing Phase-2 plan was established. They are deliberately **deferred** rather than allowed to interrupt S27 and the already-active Phase-2 dependency chain. They must remain visible and be addressed after the current critical-path work, before Phase 2 can be declared complete.
+
+#### P2-B12 — Combat-power authority audit
+**Status: ACTIVE / DEFERRED**
+
+Determine whether `UnitState.combatPower` is authoritative, derived, or obsolete. The current Ardennes fixture initializes `combatPower` to zero while the engine also derives an effective combat-power value, and the WW2 combat resolver uses a separate effectiveness calculation. Eliminate competing or dead combat-effectiveness paths and establish one authoritative semantic.
+
+#### P2-B13 — Sensor-to-engagement integration
+**Status: ACTIVE / DEFERRED**
+
+The detection system supports sensors, but the current engagement-resolution path supplies an empty sensor list. Establish the intended sensor-to-detection-to-engagement pipeline and verify actual sensor capabilities affect detection when they are supposed to.
+
+#### P2-B14 — Resource-gated movement
+**Status: ACTIVE / DEFERRED**
+
+Fuel currently drains with movement but does not meaningfully prevent or constrain movement when depleted. Define and test fuel-gated movement, including the intended behavior for zero/insufficient fuel and resupply/recovery.
+
+#### P2-B15 — Ammunition expenditure and replenishment
+**Status: ACTIVE / DEFERRED**
+
+Ammunition currently modifies combat effectiveness but is not consumed by combat in the same authoritative resource path. Define explicit ammunition deltas and authoritative replenishment/sustainment behavior.
+
+#### P2-B16 — Multi-engagement resolution semantics
+**Status: ACTIVE / DEFERRED**
+
+Define whether engagements within a turn are simultaneous, sequential, phased, or initiative-based. Prevent stale pre-combat strength from causing incorrect repeated exposure or order-dependent outcomes when units participate in multiple engagements.
+
+#### P2-B17 — Combat numerical stability and extreme-case validation
+**Status: ACTIVE / DEFERRED**
+
+Stress-test the WW2 square-law/RK4 implementation across zero/near-zero and highly asymmetric force ratios, extreme modifiers, repeated turns, and large values. Establish explicit invariants for finite, non-negative, bounded results and expected limiting behavior.
+
+#### P2-B18 — Physical movement model audit
+**Status: ACTIVE / DEFERRED**
+
+The current geographic movement model advances units by a fraction of remaining distance rather than an explicit physical movement capability. Define the required movement semantics, including unit movement capability and appropriate terrain/road/formation/logistics effects, before treating operational movement as complete.
+
+#### P2-B19 — Order normalization boundary
+**Status: ACTIVE / DEFERRED**
+
+Ensure named objectives are resolved into canonical destinations before an order reaches turn resolution, or otherwise make the contract explicit and enforce it. Avoid partially specified orders silently becoming no-ops.
+
+#### P2-B20 — Spatial environment model
+**Status: ACTIVE / DEFERRED**
+
+Assess whether terrain and weather need geographic/area-specific representation rather than only scenario-wide scalar values. Preserve the current geographic-state architecture while preventing environmental effects from becoming unrealistically global.
+
+#### P2-B21 — Detection probability semantics
+**Status: ACTIVE / DEFERRED**
+
+The current detection implementation produces a value named `probability` but uses it as a threshold rather than performing a probability draw. Decide whether the value is a deterministic detection/confidence score or a seeded probability and align naming, semantics, tests, and RNG policy accordingly.
+
+#### P2-B22 — Combined-arms input integration
+**Status: ACTIVE / DEFERRED**
+
+The WW2 combat contract accepts artillery, armor, anti-armor, air, maneuver, and command effects, but the current generic WW2 integration supplies zero for these support inputs. Connect real capabilities/effects when the historical model requires them and keep those effects era-owned.
+
+#### P2-B23 — Equipment-loss model audit
+**Status: ACTIVE / DEFERRED**
+
+The current WW2 combat model derives equipment losses from a fixed personnel-loss ratio. Replace or explicitly validate this placeholder against the canonical equipment-instance model so equipment losses are not double-accounted or detached from equipment type, status, and combat effects.
+
+#### P2-B24 — Unit-state causal-loop audit
+**Status: ACTIVE / DEFERRED**
+
+Audit morale, cohesion, experience, training, readiness, fatigue, wear, logistics, intelligence, and related state variables for complete causal and recovery loops. Distinguish functioning simulation mechanisms from static modifiers or placeholders.
+
+#### P2-B25 — Simulation API semantic equivalence
+**Status: ACTIVE / DEFERRED**
+
+Document and test the intended semantic relationship between direct `simulateTurn()` and session-based `advanceSimulation()`, including baseline/status behavior, so different public entry points cannot silently produce unexpected differences.
+
 ## Phase-2 completion gates
 
 Phase 2 is **NOT COMPLETE** merely because S27 is closed. Before Phase 2 can be declared complete, all active backlog items above must either be implemented and tested or explicitly reclassified with a documented reason, and the following gates must pass:
@@ -203,6 +277,8 @@ Phase 2 is **NOT COMPLETE** merely because S27 is closed. Before Phase 2 can be 
 - historical provenance/model assumptions distinguishable;
 - ORBAT Mapper remains an adapter/presentation layer.
 
+The deferred independent-audit findings P2-B12 through P2-B25 are also active completion requirements unless explicitly reclassified after direct verification. They must not be treated as optional cleanup merely because they were discovered after the original Phase-2 backlog was written.
+
 ## Current execution position
 
 **Phase 2: IN PROGRESS.**
@@ -213,7 +289,7 @@ Completed tracked milestones: S18, S20, S21, S23, S33.
 
 Active implementation: **P2-S27-B**, following implementation of S27-A.
 
-Additional active backlog: **P2-B01 through P2-B11**, promoted from the older architecture audit/refactor-gate requirements so they remain visible and cannot be accidentally lost during S27 work.
+Additional active backlog: **P2-B01 through P2-B25**. P2-B12 through P2-B25 were promoted from the independent direct repository audit and are intentionally deferred until the current critical-path S27 work and dependency chain are sufficiently advanced.
 
 The phase therefore has substantial work remaining even though the original six milestone items have mostly been completed. S27 remains the current critical-path item; the promoted backlog will be audited/closed in dependency order rather than treated as optional cleanup.
 
