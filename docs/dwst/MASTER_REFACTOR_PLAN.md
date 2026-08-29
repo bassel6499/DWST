@@ -16,10 +16,25 @@
 8. If a plan write cannot be safely completed, stop advancement rather than create another authority or silently proceed.
 9. Plan documents are documentation only and must not be imported by, bundled into, or otherwise directly affect project runtime code.
 10. A new chat must be able to recover project state from this file plus the repository itself; conversational memory is not a required source of truth.
+11. Phase 2 is tracked as three implementation stages. Closing a stage does not close the phase until the remaining stage backlog and merge gates are satisfied.
+12. Historical findings from older roadmap/audit documents must be promoted into the active backlog when they remain unresolved; they must not disappear merely because a newer milestone was completed.
+13. Every active bug/backlog item must have an explicit status and remain visible until directly verified closed.
 
 ## Original roadmap preservation
 
-The original refactor roadmap remains the implementation backbone. Historical phase intent and completed work must remain represented when current-state restructuring is performed. Architectural discoveries found through the Audit Map are recorded against the appropriate master-plan phase before implementation.
+The original refactor roadmap remains the implementation backbone. Historical phase intent and completed work must remain represented when current-state restructuring is performed. Architectural discoveries found through the Audit Map and older refactor-gate documents are recorded against the appropriate master-plan phase before implementation.
+
+The older architecture audit established the following refactor sequence and these remain binding design constraints:
+1. Freeze feature additions.
+2. Establish canonical simulation state and explicit adapters for legacy state.
+3. Establish canonical equipment and crew accounting.
+4. Establish a versioned era/model contract containing formulas and coefficients.
+5. Make combat resolution pure: input snapshot -> result delta; no hidden mutation.
+6. Make sustainment pure and explicit about resource deltas.
+7. Make the turn engine the only component allowed to commit state changes.
+8. Add deterministic regression fixtures before historical scenarios.
+9. Add Ardennes as scenario data only after the kernel passes fixtures.
+10. Add ORBAT Mapper/map integration only as a presentation/import/export adapter.
 
 ## Architectural boundary rules
 
@@ -31,6 +46,8 @@ The original refactor roadmap remains the implementation backbone. Historical ph
 - Canonical simulation state owns authoritative records; projections/read models must not silently become authorities.
 
 ## Phase 2 — Canonical State / Architecture Refactor
+
+### Stage 1 — Canonical state foundations
 
 ### P2-S18 — Detection geographic-distance refactor
 **Status: CLOSED / CI GREEN**
@@ -46,6 +63,8 @@ Unused WW2-specific core engagement/combat-arms implementations were removed. Th
 **Status: CLOSED**
 
 The canonical spatial path is `geographicDistanceMeters()` / geographic movement. Legacy duplicate distance paths were removed or retired where verified.
+
+### Stage 2 — Scenario/state integration
 
 ### P2-S23 — scenario geographic objectives / locations
 **Status: CLOSED / CI GREEN (user-confirmed)**
@@ -74,19 +93,112 @@ Both deletion CIs were user-confirmed green.
 
 Permanent constraint: do not merge the application scenario-store geography into DWST merely to provide objective resolution.
 
+### Stage 3 — Canonical accounting, deterministic resolution, and production gates
+
 ### P2-S27 — canonical personnel/equipment commit bridge
-**Status: NEXT / AUDITED, NOT IMPLEMENTED**
+**Status: ACTIVE / AUDITED, NOT IMPLEMENTED**
 
-Current evidence establishes that canonical personnel/equipment records exist separately from the mutable unit aggregate. `canonicalProjection` treats those records as authoritative and the unit aggregate as a projection. Combat resolution currently mutates `UnitState.personnel` / `UnitState.equipment`, but no verified canonical commit bridge exists in the combat application path.
+`CanonicalState` is the authoritative resource state containing personnel, equipment, crew assignments, and equipment definitions. The projection layer treats these records as authoritative while `UnitState` is a derived aggregate. The live `SimulationSession` currently carries `ScenarioState`, baseline, and rules but not `CanonicalState`.
 
-Next implementation goal: add the smallest generic commit bridge that applies authoritative combat deltas to canonical personnel/equipment state and then derives/refreshes the unit projection, while preserving purity of combat resolution and avoiding WW2-specific coupling.
+Combat resolution currently produces aggregate loss information and the application path mutates `UnitState.personnel` / `UnitState.equipment`; the missing bridge is a deterministic authoritative-state commit. Combat does not currently identify which authoritative personnel/equipment records are lost, so the implementation must not arbitrarily destroy the first N records.
 
-No implementation should begin until the exact current combat-application path and canonical-state mutation contract are directly re-verified.
+Required implementation contract:
+- preserve pure combat resolution;
+- introduce an explicit deterministic loss-allocation/commit contract;
+- commit identified personnel/equipment changes to `CanonicalState` at the state-application boundary;
+- regenerate/refresh the unit projection from authoritative records;
+- keep WW2 rules, ORBAT Mapper, and `scenariostore` out of the generic bridge;
+- add accounting regression tests and replay/determinism coverage.
+
+### Remaining Phase-2 backlog promoted from the older architecture audit / refactor gates
+
+These items remain active unless directly verified closed. They are deliberately tracked separately from S27 so later work cannot make them disappear:
+
+#### P2-B01 — Aggregate-vs-detailed equipment/personnel reconciliation
+**Status: ACTIVE**
+
+`UnitState` aggregate personnel/equipment fields must be reconciled with the detailed authoritative ledgers/records. Compatibility fields must not become a second accounting authority.
+
+#### P2-B02 — Duplicate crew training/reinforcement pipeline
+**Status: ACTIVE**
+
+Older refactor gates identify duplicate crew training/reinforcement implementations. Establish one authoritative pipeline and verify specialist qualification rules remain explicit and deterministic.
+
+#### P2-B03 — Direct combat state mutation removal
+**Status: ACTIVE / coupled to S27**
+
+Combat resolution must remain a pure snapshot-to-delta operation. All authoritative state mutation must occur through the turn/state-application commit boundary.
+
+#### P2-B04 — Deterministic RNG/state handling
+**Status: ACTIVE**
+
+Define and enforce canonical deterministic RNG/state handling so identical state + orders + ruleset + seed produce identical results.
+
+#### P2-B05 — Accounting and replay regression suite
+**Status: ACTIVE**
+
+Add regression tests covering personnel/equipment accounting, authoritative-state transitions, deterministic replay, and reproducibility from saved initial state plus ordered command log.
+
+#### P2-B06 — Independent mathematical combat-model validation
+**Status: ACTIVE**
+
+Validate combat mathematics independently before coupling further historical scenario/UI behavior. Coefficients must remain inspectable and must not be tuned solely to create attractive outcomes.
+
+#### P2-B07 — Sustainment/resource-delta purity audit
+**Status: ACTIVE**
+
+The older architecture sequence requires sustainment to be pure and explicit about resource deltas. Verify the current implementation has one authoritative commit path and no hidden mutation.
+
+#### P2-B08 — One authoritative turn-state commit boundary
+**Status: ACTIVE**
+
+The turn engine/state application layer must be the only component allowed to commit simulation state changes. Audit remaining direct mutation paths after S27.
+
+#### P2-B09 — Deterministic regression fixtures before historical validation
+**Status: ACTIVE**
+
+Build/verify deterministic kernel fixtures before expanding historical scenario validation. Historical scenario content must not be used to hide kernel instability.
+
+#### P2-B10 — Historical provenance/model-assumption separation
+**Status: ACTIVE**
+
+Historical claims require provenance and must remain distinguishable from model assumptions. The engine must not invent OOB data.
+
+#### P2-B11 — Final ORBAT Mapper adapter boundary audit
+**Status: ACTIVE / later-stage gate**
+
+ORBAT Mapper remains presentation/import/export only. Verify that future map integration cannot modify simulation mathematics or become a source of combat truth.
+
+## Phase-2 completion gates
+
+Phase 2 is **NOT COMPLETE** merely because S27 is closed. Before Phase 2 can be declared complete, all active backlog items above must either be implemented and tested or explicitly reclassified with a documented reason, and the following gates must pass:
+
+- one authoritative simulation state;
+- separate authoritative personnel, crew, and equipment accounting;
+- no implicit personnel/equipment replacement;
+- no direct authoritative mutation inside combat resolution;
+- exactly one equipment-loss accounting path per resolution;
+- deterministic state + orders + ruleset + seed behavior;
+- reproducible AAR/replay from initial state + ordered command log;
+- independently validated combat mathematics;
+- explicit sustainment/resource deltas;
+- historical provenance/model assumptions distinguishable;
+- ORBAT Mapper remains an adapter/presentation layer.
 
 ## Current execution position
 
-S23 and S33 are complete. The next implementation item is P2-S27. The plan must be synchronized with every implementation and CI result before advancing to the following item.
+**Phase 2: IN PROGRESS.**
+
+Current stage: **Stage 3 — Canonical accounting, deterministic resolution, and production gates.**
+
+Completed tracked milestones: S18, S20, S21, S23, S33.
+
+Active implementation: **P2-S27**.
+
+Additional active backlog: **P2-B01 through P2-B11**, promoted from the older architecture audit/refactor-gate requirements so they remain visible and cannot be accidentally lost during S27 work.
+
+The phase therefore has substantial work remaining even though the original six milestone items have mostly been completed. S27 is the current critical-path item; the promoted backlog will be audited/closed in dependency order rather than treated as optional cleanup.
 
 ## Historical / audit record
 
-The Architectural Blueprint/Audit Map remains a discovery artifact. Findings discovered through that audit are incorporated into the phase/item above before implementation. Earlier roadmap information is retained rather than discarded when the current plan is restructured.
+The Architectural Blueprint/Audit Map and older architecture/refactor-gate documents remain discovery and historical artifacts. Their unresolved requirements have been promoted into this master plan rather than discarded. Findings discovered through those audits must be incorporated into the appropriate phase/item before implementation.
