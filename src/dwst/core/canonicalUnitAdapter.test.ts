@@ -22,12 +22,15 @@ const canonicalState: CanonicalState = {
   equipmentDefinitions: [
     { id: 'tank', name: 'Tank', era: 'Modern', equipmentType: 'tank', crewRequirementId: 'tankCrew' },
   ],
+  consumables: [{ unitId: 'u1', ammunition: 0.75, fuel: 0.6 }],
 };
 
 describe('projectCanonicalUnitResources', () => {
-  it('keeps equipment readiness separate from UnitState.readiness', () => {
+  it('projects canonical ammunition and fuel alongside resource aggregates', () => {
     const result = projectCanonicalUnitResources('u1', canonicalState);
     expect(result.equipmentReadiness).toBe(1);
+    expect(result.ammunition).toBe(0.75);
+    expect(result.fuel).toBe(0.6);
     expect(result).not.toHaveProperty('readiness');
   });
 
