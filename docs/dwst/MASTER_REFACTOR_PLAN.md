@@ -107,7 +107,7 @@ Permanent constraint: do not merge the application scenario-store geography into
 ### Stage 3 — Canonical accounting, deterministic resolution, and production gates
 
 ### P2-S27 — canonical personnel/equipment commit bridge
-**Status: ACTIVE — S27-A IMPLEMENTED; S27-B IMPLEMENTED / CI PENDING; S27-C/D REMAIN**
+**Status: ACTIVE — S27-A IMPLEMENTED; S27-B IMPLEMENTED / CI GREEN (user-confirmed); S27-C ACTIVE; S27-D REMAINS**
 
 `CanonicalState` is the authoritative resource state containing personnel, equipment, crew assignments, and equipment definitions. The projection layer treats these records as authoritative while `UnitState` is a derived aggregate. The live `SimulationSession` currently carries `ScenarioState`, baseline, and rules but not `CanonicalState`.
 
@@ -125,7 +125,7 @@ Focused tests were added in `src/dwst/core/canonicalCombatCommit.test.ts`, cover
 Test commit: `efce9936d4bbf816ad38fc863db201728a8b5e93`.
 
 #### S27-B — deterministic casualty/resource allocation
-**Status: IMPLEMENTED / CI PENDING**
+**Status: IMPLEMENTED / CI GREEN (user-confirmed)**
 
 Added `src/dwst/core/canonicalCombatAllocation.ts` and focused tests in `src/dwst/core/canonicalCombatAllocation.test.ts`.
 
@@ -134,16 +134,41 @@ The generic allocator converts aggregate personnel/equipment loss counts into ex
 This is intentionally an accounting allocation policy, not a WW2 casualty model. It does not invent historical casualty distributions or infer dispositions. A future era-specific policy can replace the generic selection policy without changing the canonical commit contract.
 
 Implementation commits:
-- `7c95e6d3ef296f6f9ef9e0522cb5b54dec3c887a` — initial S27-B allocator.
+- `7c95e6d3ef296f6f9e0522cb5b54dec3c887a` — initial S27-B allocator.
 - `e5d23583e2b23fe9576a819397ac356ee0cb36e0` — readonly policy-input type correction.
 - `da5ca09bbf988d31cfb627033ab15525dbf26510` — S27-B focused tests.
 
-Validation status: no CI workflow run or commit status is currently available for the latest S27-B commit, so S27-B is not marked green/closed.
+Validation:
+- CI `33272307366`: RED — initial S27-B type errors.
+- CI `33272314088`: RED — implementation plus readonly-policy test typing errors.
+- CI `33272322070`: RED — implementation status-contract errors remained.
+- CI `33272351810`: RED — implementation status-contract errors remained.
+- Corrective implementation commit: `04834d1237a454bfb61a22f53b903fb45cf0e64b`.
+- CI `33272533208`: GREEN (user-confirmed), including type-check and unit tests.
 
 #### S27-C — canonical-to-unit projection reconciliation
-**Status: ACTIVE**
+**Status: ACTIVE / ARCHITECTURAL INTEGRATION REQUIRED**
 
-After canonical commit, affected unit aggregates must be regenerated/reconciled from authoritative records and verified against accounting invariants. Compatibility aggregates must not become a second authority.
+Direct inspection established that the repository already contains a read-only canonical projection (`canonicalProjection.ts`) and adapter, but the live engine still resolves turns against `ScenarioState.units`. The expected `unitState.ts` path does not exist in the current tree, so S27-C is not a conventional `UnitState` synchronization task and must not create a speculative second state layer.
+
+Verified current paths:
+
+`CanonicalState` personnel/equipment/crew registries -> `projectCanonicalUnit()` -> `CanonicalUnitProjection` / adapter.
+
+`ScenarioState` -> `resolveTurn()` -> movement/readiness/logistics -> `resolveEngagements()` -> `applyCombatResult()` -> `SimulationReport` -> `applyTurn()` -> `ScenarioState`.
+
+The critical finding is that these paths are not yet proven to share a single authoritative live resource state. The live engine currently treats `ScenarioState.units` as its operational state while canonical resource records and projections exist alongside it. S27-C must therefore establish the authority boundary and integration path rather than merely add a reconciliation function.
+
+Required architectural direction:
+- `CanonicalState` remains authoritative for detailed personnel, equipment, and crew records.
+- `CanonicalUnitProjection` / adapter remains derived and read-only.
+- Compatibility `UnitState` resource aggregates, if retained, are projections/views and must not become a second authority.
+- Simulation-only state such as position, fatigue, readiness, morale, cohesion, logistics, and other operational variables must have explicit ownership and must not be accidentally overwritten by resource projection.
+- The live turn lifecycle must be able to consume canonical resource projections and commit authoritative resource changes through the single turn/state-application boundary.
+- After authoritative commits, affected unit resource aggregates must be regenerated from canonical records; no independent aggregate bookkeeping may silently diverge.
+- Do not create a new `UnitState` implementation solely to satisfy the plan terminology.
+
+S27-C cannot be closed until a direct source-level trace and regression tests prove the canonical resource state is authoritative through the live turn lifecycle.
 
 #### S27-D — live-turn integration and replay regression
 **Status: ACTIVE**
@@ -334,7 +359,7 @@ Current stage: **Stage 3 — Canonical accounting, deterministic resolution, and
 
 Completed tracked milestones: S18, S20, S21, S23, S33.
 
-Active implementation: **P2-S27-B**, following implementation of S27-A.
+Active implementation: **P2-S27-C**, following verified-green S27-B and completed S27-A foundations.
 
 Additional active backlog: **P2-B01 through P2-B26**. P2-B12 through P2-B25 were promoted from the independent direct repository audit and are intentionally deferred until the current critical-path S27 work and dependency chain are sufficiently advanced. P2-B26 establishes the independent/headless DWST architecture as a design requirement and is likewise deferred from immediate implementation.
 
@@ -352,4 +377,6 @@ The Architectural Blueprint/Audit Map and older architecture/refactor-gate docum
 - S27-B implementation commit: `7c95e6d3ef296f6f9ef9e0522cb5b54dec3c887a`.
 - S27-B policy-input correction commit: `e5d23583e2b23fe9576a819397ac356ee0cb36e0`.
 - S27-B focused-test commit: `da5ca09bbf988d31cfb627033ab15525dbf26510`.
-- The latest S27-B commit currently has no reported CI workflow run/status, so S27-B remains CI pending and is not closed.
+- S27-B corrective implementation commit: `04834d1237a454bfb61a22f53b903fb45cf0e64b`.
+- S27-B validation: CI `33272533208` GREEN (user-confirmed).
+- S27-C finding: canonical projection/adapter exists, but the live turn engine remains `ScenarioState`/`UnitState` driven and the canonical resource path is not yet proven integrated. S27-C therefore requires an explicit authority-boundary/live-turn integration, not a speculative new `UnitState` layer.
