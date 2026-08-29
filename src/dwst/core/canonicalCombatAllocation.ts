@@ -17,8 +17,8 @@ export interface CombatLossCounts {
 export interface CombatAllocationPolicy {
   personnelDisposition: CombatPersonnelDisposition;
   equipmentDisposition: CombatEquipmentDisposition;
-  eligiblePersonnelStatuses: ReadonlyArray<'available' | 'training' | 'assigned'>;
-  eligibleEquipmentStatuses: ReadonlyArray<'operational' | 'damaged'>;
+  eligiblePersonnelStatuses: ReadonlyArray<'available' | 'training' | 'assigned' | 'wounded' | 'killed' | 'missing'>;
+  eligibleEquipmentStatuses: ReadonlyArray<'operational' | 'damaged' | 'destroyed' | 'missing'>;
   selection: 'stable-id';
 }
 
