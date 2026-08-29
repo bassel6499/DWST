@@ -96,19 +96,37 @@ Permanent constraint: do not merge the application scenario-store geography into
 ### Stage 3 — Canonical accounting, deterministic resolution, and production gates
 
 ### P2-S27 — canonical personnel/equipment commit bridge
-**Status: ACTIVE / AUDITED, NOT IMPLEMENTED**
+**Status: ACTIVE — S27-A IMPLEMENTED; S27-B/C/D REMAIN**
 
 `CanonicalState` is the authoritative resource state containing personnel, equipment, crew assignments, and equipment definitions. The projection layer treats these records as authoritative while `UnitState` is a derived aggregate. The live `SimulationSession` currently carries `ScenarioState`, baseline, and rules but not `CanonicalState`.
 
 Combat resolution currently produces aggregate loss information and the application path mutates `UnitState.personnel` / `UnitState.equipment`; the missing bridge is a deterministic authoritative-state commit. Combat does not currently identify which authoritative personnel/equipment records are lost, so the implementation must not arbitrarily destroy the first N records.
 
-Required implementation contract:
-- preserve pure combat resolution;
-- introduce an explicit deterministic loss-allocation/commit contract;
-- commit identified personnel/equipment changes to `CanonicalState` at the state-application boundary;
-- regenerate/refresh the unit projection from authoritative records;
-- keep WW2 rules, ORBAT Mapper, and `scenariostore` out of the generic bridge;
-- add accounting regression tests and replay/determinism coverage.
+#### S27-A — explicit canonical combat commit contract
+**Status: IMPLEMENTED / CI PENDING**
+
+Added `src/dwst/core/canonicalCombatCommit.ts`. The contract accepts explicit personnel IDs and equipment instance IDs with explicit dispositions and applies those changes immutably to `CanonicalState`. It rejects duplicate and unknown record allocations. No casualty identity or disposition is invented by the commit layer.
+
+Commit: `dc897ab290ec863cd6d8b424aedca05072ce7a47`.
+
+Focused tests were added in `src/dwst/core/canonicalCombatCommit.test.ts`, covering explicit allocation, immutability, duplicate IDs, and unknown IDs.
+
+Test commit: `efce9936d4bbf816ad38fc863db201728a8b5e93`.
+
+#### S27-B — deterministic casualty/resource allocation
+**Status: ACTIVE**
+
+Define how an aggregate combat result becomes an explicit canonical allocation without embedding WW2-specific casualty assumptions in the generic bridge. The allocation policy must be deterministic and inspectable.
+
+#### S27-C — canonical-to-unit projection reconciliation
+**Status: ACTIVE**
+
+After canonical commit, affected unit aggregates must be regenerated/reconciled from authoritative records and verified against accounting invariants. Compatibility aggregates must not become a second authority.
+
+#### S27-D — live-turn integration and replay regression
+**Status: ACTIVE**
+
+Carry canonical resource state through the live simulation turn boundary, commit authoritative changes there, and add deterministic/replay/accounting regression coverage.
 
 ### Remaining Phase-2 backlog promoted from the older architecture audit / refactor gates
 
@@ -193,12 +211,19 @@ Current stage: **Stage 3 — Canonical accounting, deterministic resolution, and
 
 Completed tracked milestones: S18, S20, S21, S23, S33.
 
-Active implementation: **P2-S27**.
+Active implementation: **P2-S27-B**, following implementation of S27-A.
 
 Additional active backlog: **P2-B01 through P2-B11**, promoted from the older architecture audit/refactor-gate requirements so they remain visible and cannot be accidentally lost during S27 work.
 
-The phase therefore has substantial work remaining even though the original six milestone items have mostly been completed. S27 is the current critical-path item; the promoted backlog will be audited/closed in dependency order rather than treated as optional cleanup.
+The phase therefore has substantial work remaining even though the original six milestone items have mostly been completed. S27 remains the current critical-path item; the promoted backlog will be audited/closed in dependency order rather than treated as optional cleanup.
 
 ## Historical / audit record
 
 The Architectural Blueprint/Audit Map and older architecture/refactor-gate documents remain discovery and historical artifacts. Their unresolved requirements have been promoted into this master plan rather than discarded. Findings discovered through those audits must be incorporated into the appropriate phase/item before implementation.
+
+## Latest S27 execution record
+
+- S27-A implementation commit: `dc897ab290ec863cd6d8b424aedca05072ce7a47`.
+- S27-A focused-test commit: `efce9936d4bbf816ad38fc863db201728a8b5e93`.
+- S27-A uses explicit canonical record IDs and dispositions; it does not invent casualty allocation.
+- The focused test suite must pass CI before S27-A is marked validated.
