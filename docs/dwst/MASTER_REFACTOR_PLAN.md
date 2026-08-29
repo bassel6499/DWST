@@ -3,6 +3,59 @@
 ## Mission
 Refactor DWST into a deterministic, testable, era-aware simulation engine with explicit state authority, geographic spatial semantics, canonical accounting, and a clean visualization boundary.
 
+## DWST architectural definition — non-negotiable project identity
+
+DWST is a **generic simulation core**, not an individual historical scenario and not a graphics application. The Core provides the reusable simulation machinery; era packages and scenarios provide the content/configuration that the Core executes.
+
+The authoritative conceptual flow is:
+
+`user selects era + scenario → validate/load era package and scenario → DWST Core executes → state/report outputs → consumers render or present the results`
+
+### 1. DWST Core
+
+The Core is era-agnostic in its architecture. It owns generic simulation mechanisms and contracts, including authoritative state, turn/session orchestration, movement, detection, combat orchestration, resource accounting, validation, deterministic execution, replay/provenance, and reporting interfaces. Core code must not contain hard-coded assumptions belonging to one historical era, battle, army, weapon system, or scenario.
+
+### 2. Era package / ruleset
+
+An era package supplies the rules, capabilities, definitions, and coefficients required to simulate a particular technological/historical era. Era-specific mechanics belong here, not in generic Core orchestration. The existence of an era-specific implementation must never require copying or forking the Core.
+
+### 3. Scenario
+
+A scenario supplies the concrete situation to simulate: forces/OOB, initial state, equipment/personnel data, geography, starting conditions, objectives, and scenario-specific configuration. A scenario is data/configuration consumed by the Core; it is not a replacement simulation engine.
+
+### 4. Selection and bootstrap boundary
+
+The application/bootstrap layer selects an era and scenario, validates that they are compatible and runnable, loads their definitions, and supplies them to the Core. Selection logic must not become a second simulation engine.
+
+### 5. Consumers and presentation
+
+ORBAT Mapper, a graphical UI, CLI, standalone/headless execution, written reports, and a future chat-like interface are **consumers of DWST**, not simulation authorities. They may render, query, submit valid commands through the public boundary, or present reports, but they must not maintain competing simulation state or duplicate Core rules.
+
+DWST must therefore be capable of running without ORBAT Mapper or any graphical frontend. A standalone execution can take an era + scenario + commands, run the same Core, and return deterministic machine-readable and human-readable results suitable for a written/chat interaction.
+
+### 6. One Core, many eras/scenarios
+
+The intended architecture is:
+
+`WW2 + Ardennes → same DWST Core`
+
+`Cold War + Scenario X → same DWST Core`
+
+`Modern + Scenario Y → same DWST Core`
+
+Only the supplied era/scenario package changes. Core architecture, state authority, session semantics, deterministic execution, and public contracts remain shared.
+
+### 7. Architectural prohibitions
+
+- No era-specific scenario logic may be embedded in generic Core modules.
+- No scenario may fork or replace the Core simulation pipeline.
+- No frontend or visualization system may become simulation authority.
+- No parallel session/state/resource engine may be introduced for a particular era, scenario, or frontend.
+- No consumer may bypass the authoritative Core session/state/resource pipeline.
+- Any future extension must preserve the separation between Core mechanisms, era rules, scenario data, and presentation/consumption.
+
+This definition takes precedence over implementation convenience and must be preserved throughout the refactor.
+
 ## Working rules
 
 1. Do not guess. Any uncertain behavior, architecture, dependency, historical fact, or implementation detail must be verified directly from the repository, tests, authoritative documentation, or explicitly marked as unknown.
@@ -125,7 +178,7 @@ B16 — CLI/API boundary: keep external interfaces thin and prevent adapter logi
 
 B17 — Visualization projection: preserve ORBAT Mapper as a consumer/projection layer only.
 
-B18 — Standalone reporting: DWST must support operation without a graphical map by producing deterministic written simulation reports suitable for a chat-like interaction.
+B18 — Standalone reporting: DWST must support operation without a graphical map by producing deterministic written simulation reports suitable for a chat-like interaction, using the same Core session as other consumers.
 
 B19 — Reporting determinism: identical simulation inputs must produce stable machine-readable and human-readable reports apart from explicitly permitted presentation metadata.
 
@@ -139,7 +192,7 @@ B23 — Branch/main integration readiness: verify Phase-2 invariants and CI befo
 
 B24 — Final legacy-path audit: perform the final sweep for superseded paths **after P2-S22/P2-S30 are resolved**; do not duplicate their migration/documentation work.
 
-B25 — Plan/repository synchronization audit: verify every closed plan item against repository evidence before Phase-2 completion.
+B25 — Plan/repository synchronization audit: verify every closed plan item against repository evidence before Phase-2 completion; P2-S30 owns documentation reconciliation.
 
 B26 — Phase-2 completion gate: all mandatory acceptance criteria, CI, replay/accounting, and full-system tests must pass before declaring Phase 2 complete.
 
