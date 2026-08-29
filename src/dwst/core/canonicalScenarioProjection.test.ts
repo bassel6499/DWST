@@ -12,7 +12,7 @@ const scenario: ScenarioState = {
       personnel: 99, equipment: 88, ammunition: 10, fuel: 10,
       readiness: 0.8, training: 0.7, experience: 0.6, morale: 0.7, cohesion: 0.8,
       fatigue: 0.1, wear: 0.1, logistics: 0.9, commandQuality: 0.8, intelligence: 0.5,
-      combatPower: 10, status: 'operational', position: { latitude: 1, longitude: 2 },
+      combatPower: 10, status: 'operational', position: { lat: 1, lon: 2 },
       cumulativeLosses: 0, history: [],
     },
   },
