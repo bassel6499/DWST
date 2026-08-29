@@ -24,6 +24,7 @@
 18. **Plan synchronization is mandatory.** After each authorized implementation item and its validation, update this plan with the exact result before beginning the next implementation item. Plan-only restructuring may consolidate presentation, but must not erase historical records.
 19. **Preserve historical record.** When restructuring this document, retain the original roadmap, completed work, findings, dates, CI identifiers, architectural decisions, and rejected/removed legacy paths. Historical material may be reorganized or cross-referenced, but not silently discarded.
 20. **Whole-system distinction.** A module-level green test suite is not equivalent to an end-to-end simulation validation. The plan must distinguish source/architecture audit, unit tests, integration tests, UI-path tests, and whole-simulation behavioral validation.
+21. **Lossless plan-update protocol.** When this master plan must be synchronized, first obtain the complete current file from the current branch (prefer the Git blob by its exact SHA when a normal file read is truncated), preserve that complete text, make only the explicitly required documentation edits, and replace the file atomically using the current blob SHA. Never reconstruct the plan from a partial/truncated read, never replace it with a shortened summary, and never use search output as the document source. After the write, re-read the resulting file/blob and verify the preserved roadmap, historical records, active findings, statuses, CI identifiers, and new rules are present. If the complete source cannot be obtained, do not write the plan; resolve the retrieval problem first.
 
 ## 1. Long-term DWST roadmap — preserved project-level roadmap
 
@@ -198,7 +199,7 @@ next ScenarioState
 
 **Primary modules:** `engine.ts`, `combat.ts`, `detection.ts`, logistics/sustainment modules, `eraRules.ts`.
 
-**Current audit warning:** the map above is the intended architecture. The current implementation does not yet satisfy every box; specifically, the active engine has simplified inline sustainment while a separate `sustainment.ts` contains another model, and UI/session paths differ in baseline/status handling. These are tracked as P2-S26 and P2-S25.
+**Current audit warning:** the map above is the intended architecture. The current implementation does not yet satisfy every box; specifically, the active engine has simplified inline sustainment while a separate `sustainment.ts` contains another model, and the prior UI/session paths differed in baseline/status handling. P2-S25 is now closed by the P2-S37 correction; P2-S26 remains open for sustainment consolidation.
 
 ### D. Era/ruleset map
 
@@ -349,22 +350,24 @@ These findings were established during the whole-system audit of the current sou
 #### P2-S24 — UI turn-duration selector is disconnected from simulation state
 **Severity: High functional integration defect.**
 
-**Direct evidence:** the command panel maintains `turnHours` locally for 1h/3h/6h/12h/24h choices, while the demo simulation state retains its own six-hour value and `simulateTurn()` consumes the state value. No demonstrated binding transfers the UI selection into `ScenarioState` before simulation.
+**Direct evidence:** the command panel maintained `turnHours` locally for 1h/3h/6h/12h/24h choices, while the demo simulation state retained its own six-hour value and the live path did not transfer the selector value into `ScenarioState` before simulation.
 
-**Required end state:** one authoritative turn-duration value must flow from UI/session state into the canonical simulation input and be reflected in tests.
+**Resolution:** the command panel now receives the canonical `turnHours` value from the parent and emits `update:turnHours`; the demo writes that value immutably into `session.state.turnHours`. The live session therefore advances using the selected canonical duration rather than a disconnected local selector.
 
-**Status:** Open — implementation not started.
+**Validation:** final implementation commit `40d1506cd45f5f6785c95fa44a9d2d56d0b3baa1` was validated by the user's direct confirmation that CI run `33206531980` was green. The preceding commit `881020a739a4f29b33729d4c43c7d147b4b2ca8a` produced a temporary type-check failure in CI run `33206514848` because the child component prop contract had been changed before the parent was updated; the immediately following commit supplied the missing parent binding and the final state passed CI.
+
+**Status:** Closed / validated.
 
 #### P2-S25 — Live UI simulation bypasses the baseline/status assessment lifecycle
 **Severity: Critical simulation-integrity defect.**
 
-**Direct evidence:** the dedicated simulation-session path can call `resolveTurn(..., baseline)` and perform `assessUnit()`; the live demo calls `simulateTurn()` without a baseline. `resolveTurn()` only performs baseline-dependent assessment when a baseline is supplied. Thus the user-facing simulation path and the session simulation path do not share identical assessment/status semantics.
+**Direct evidence:** the dedicated simulation-session path could call `resolveTurn(..., baseline)` and perform `assessUnit()`; the live demo previously called `simulateTurn()` without a baseline.
 
-**Required end state:** define one canonical simulation/session path or explicitly separate the paths with equivalent documented semantics. Unit status must be derived/updated consistently from canonical results.
+**Resolution:** the live `DwstDemoView` was routed through `startSimulation()` and `advanceSimulation()`, making `SimulationSession` the canonical live simulation lifecycle while retaining `simulateTurn()` as a lower-level pure one-turn helper rather than deleting or duplicating it.
 
-**Dependencies:** P2-S27/P2-S30 where resource/status commit semantics overlap.
+**Validation:** implementation commit `84f1fe7e35020e374fd7e55f3e8e28a2ce02dd7d` was validated by the user's direct confirmation that CI run `33205394873` was green.
 
-**Status:** Open — implementation not started.
+**Status:** Closed / validated by P2-S37 correction.
 
 #### P2-S26 — Competing sustainment models and mutation-boundary violation
 **Severity: Critical architectural defect.**
@@ -472,21 +475,23 @@ These findings were established during the whole-system audit of the current sou
 #### P2-S37 — Active simulation path and auxiliary simulation modules are not yet proven to have one behavioral contract
 **Severity: High architectural/integration defect.**
 
-**Direct evidence:** the repository contains `simulationSession.ts`, `simulationBaseline.ts`, `engine.ts`, sustainment/logistics helpers, order processing, and UI-driven simulation. The audit found differences in baseline handling and sustainment integration. The repository therefore needs an explicit contract proving which path is authoritative for a turn and which modules are supporting/legacy.
+**Direct evidence:** the repository contained `simulationSession.ts`, `simulationBaseline.ts`, `engine.ts`, sustainment/logistics helpers, order processing, and UI-driven simulation. The audit found differences in baseline handling and sustainment integration.
 
-**Required end state:** one documented simulation contract with a single canonical entry path; auxiliary APIs either delegate to it or are clearly scoped as lower-level pure helpers.
+**Resolution:** the live `DwstDemoView` was routed through the canonical `SimulationSession` lifecycle using `startSimulation()` and `advanceSimulation()`. `SimulationSession` now supplies the live path's preserved T0 baseline and fixed ruleset semantics. `simulateTurn()` remains a lower-level pure one-turn helper rather than a second live lifecycle.
 
-**Status:** Open — architecture consolidation item.
+**Validation:** implementation commit `84f1fe7e35020e374fd7e55f3e8e28a2ce02dd7d` was validated by the user's direct confirmation that CI run `33205394873` was green.
+
+**Status:** Closed / validated.
 
 ### 3.4 Dependency-aware execution order after restructuring
 
 The newly found issues are **not** to be fixed in discovery order. The order below prevents fixing downstream symptoms twice.
 
 #### Stage A — Establish the canonical live simulation contract
-1. **P2-S37:** define/verify the one canonical live simulation entry path and contract.
-2. **P2-S25:** reconcile UI simulation with session/baseline/status semantics.
-3. **P2-S24:** connect turn-duration selection to canonical simulation input.
-4. **P2-S23:** fix movement-order destination/objective resolution against the canonical order contract.
+1. **P2-S37:** define/verify the one canonical live simulation entry path and contract. **Closed / validated.**
+2. **P2-S25:** reconcile UI simulation with session/baseline/status semantics. **Closed / validated by S37.**
+3. **P2-S24:** connect turn-duration selection to canonical simulation input. **Closed / validated.**
+4. **P2-S23:** fix movement-order destination/objective resolution against the canonical order contract. **Next active item.**
 5. Add focused integration tests for the live command → simulation path.
 
 #### Stage B — Re-establish canonical state mutation/resource authority
@@ -514,7 +519,7 @@ The newly found issues are **not** to be fixed in discovery order. The order bel
 
 ### 3.5 Authorization rule for the new findings
 
-The findings above are **recorded, not authorized for implementation**. Each source modification must be explicitly authorized by the user. Before each implementation:
+The findings above are **recorded, not authorized for implementation** unless their individual status/history explicitly records a completed authorized correction. Before each new implementation:
 
 1. re-read the current source at the current branch head;
 2. verify the finding still exists;
@@ -567,6 +572,10 @@ The new findings do **not** reorder or erase the original roadmap.
 - 2026-08-28: Whole-system audit identified P2-S23 through P2-S37. These are recorded before implementation and are dependency-ordered to prevent downstream fixes from masking or duplicating upstream architectural corrections.
 - 2026-08-28: Restructured the master plan while preserving the original long-term roadmap, historical findings, completed work, CI identifiers, architectural rules, and blueprint/audit-map distinction.
 - 2026-08-28: Strengthened the plan's CI reporting protocol: when CI is running, report that it is running and wait; do not infer green from partial results; user-confirmed manual inspection may be recorded as validation evidence.
+- 2026-08-29: P2-S37 live simulation-path correction committed as `84f1fe7e35020e374fd7e55f3e8e28a2ce02dd7d`; user confirmed CI run `33205394873` green. The live DWST demo now uses `SimulationSession` for canonical baseline/ruleset lifecycle.
+- 2026-08-29: P2-S25 closed by the P2-S37 correction; no duplicate source fix was created.
+- 2026-08-29: P2-S24 turn-duration binding implemented in commits `881020a739a4f29b33729d4c43c7d147b4b2ca8a` and `40d1506cd45f5f6785c95fa44a9d2d56d0b3baa1`. User confirmed CI run `33206514848` red on the intermediate commit due to the expected parent-prop type-check gap, then CI run `33206531980` green on the final commit. The intermediate failure is retained as validation history, not an unresolved defect.
+- 2026-08-29: Added a lossless master-plan update protocol requiring complete blob retrieval by exact SHA, atomic full-document replacement, and post-write verification so future plan synchronization cannot rely on truncated reads or accidentally discard historical material.
 
 ## 6. Current authoritative status
 
@@ -577,11 +586,11 @@ The new findings do **not** reorder or erase the original roadmap.
 **Phase 3–15:** Future
 
 ### Refactor findings
-**Closed:** P2-S7, P2-S17, P2-S18, P2-S19, P2-S20, P2-S21, P2-S22  
-**Open:** P2-S23 through P2-S37  
+**Closed:** P2-S7, P2-S17, P2-S18, P2-S19, P2-S20, P2-S21, P2-S22, P2-S24, P2-S25, P2-S37  
+**Open:** P2-S23, P2-S26, P2-S27, P2-S28, P2-S29, P2-S30, P2-S31, P2-S32, P2-S33, P2-S34, P2-S35, P2-S36  
 **No new implementation is authorized merely by recording these findings.**
 
 ### Immediate next work
-**Stage A, P2-S37:** establish the canonical live simulation contract and reconcile the parallel simulation/session paths before fixing downstream UI symptoms.
+**Stage A, P2-S23:** fix movement-order destination/objective resolution against the canonical order contract. First re-read the current branch source and trace all direct consumers before changing anything.
 
-This is the current stopping point. The plan is now the source of truth for the next work sequence, while the older roadmap and historical record remain preserved above.
+The original roadmap, historical findings, current audit findings, execution dependencies, and synchronization rules are intentionally retained in this document. This document is the current authoritative refactor/work-plan source.
