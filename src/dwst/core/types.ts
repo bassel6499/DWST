@@ -17,7 +17,8 @@ export interface UnitState {
   cumulativeLosses:number; history:UnitEvent[];
 }
 export interface Order { type:'move'|'attack'|'defend'|'screen'|'reserve'|'withdraw'|'recon'; objective?:string; destination?:WorldPosition; priority?:'low'|'normal'|'high'; posture?:'cautious'|'normal'|'aggressive'; text?:string; }
-export interface ScenarioState { id:string; name:string; era:EraId; scale:Scale; turnHours:number; elapsedHours:number; weather:number; terrain:number; intelLevel:number; units:Record<string,UnitState>; events:SimulationEvent[]; }
+export interface ScenarioLocation { id:string; name:string; position:WorldPosition; }
+export interface ScenarioState { id:string; name:string; era:EraId; scale:Scale; turnHours:number; elapsedHours:number; weather:number; terrain:number; intelLevel:number; units:Record<string,UnitState>; events:SimulationEvent[]; locations?:ScenarioLocation[]; }
 export interface UnitEvent { turn:number; type:string; summary:string; personnelLosses?:number; equipmentLosses?:number; }
 export interface SimulationEvent { turn:number; phase:'movement'|'combat'|'sustainment'|'command'; message:string; unitIds:string[]; }
 export interface SimulationReport { turn:number; elapsedHours:number; events:SimulationEvent[]; units:UnitState[]; }
