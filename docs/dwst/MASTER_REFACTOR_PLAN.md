@@ -70,6 +70,8 @@ Refactor DWST into a deterministic, testable, era-aware simulation engine with e
 | P2-S30 | Architecture documentation has drifted from the current tree | OPEN | Reconcile `ARCHITECTURE_AUDIT.md`, resource-accounting documentation, notes, and the master plan with the actual current tree so removed modules are not documented as live and current duplicate models are not omitted. |
 | P2-S31 | Canonical personnel/equipment ownership is optional and ambiguous | OPEN | Define explicit ownership semantics for unassigned canonical records (unit, reserve, depot, pool, etc.) and enforce them. `unitId` must not be optional without a defined non-unit ownership model. |
 
+**Scope rule for S20-S31:** these are architectural blockers discovered by the whole-repository audit. Their implementation and closure must be handled as their own findings. Existing B-series items must not re-open, duplicate, or claim closure of these findings. A B-series item may depend on an S20-S31 fix or validate a downstream invariant, but it must not silently absorb the S20-S31 scope.
+
 ### S27 — Canonical resource accounting bridge
 
 **Status: CLOSED**
@@ -87,37 +89,39 @@ No implicit casualty/equipment disposition guessing is permitted.
 
 ### Active B-series / remaining Phase-2 work
 
-B01 — Aggregate-vs-detailed reconciliation: validate every remaining aggregate mutation/projection path and eliminate competing authority.
+**B-series scope rule:** B01-B26 below are downstream implementation/verification tasks. They do not own or re-implement the architectural findings P2-S20 through P2-S31. Where a B item touches the same subsystem, it must consume the S-series architectural decision and verify only its own stated acceptance criteria.
 
-B02 — State transition invariants: strengthen executable invariants around valid state transitions.
+B01 — Aggregate-vs-detailed reconciliation: validate remaining aggregate mutation/projection paths **after P2-S21/P2-S23/P2-S28 decisions are implemented**; do not duplicate their architectural unification work.
 
-B03 — Direct combat/state mutation audit: ensure combat produces results and does not bypass the explicit application/commit boundary.
+B02 — State transition invariants: strengthen executable invariants around valid state transitions, without redefining session/resource architecture from P2-S20.
 
-B04 — Deterministic RNG: make stochastic behavior reproducible from explicit seed/state.
+B03 — Direct combat/state mutation audit: ensure combat produces results and does not bypass the explicit application/commit boundary; do not absorb P2-S28's explicit resource-delta architecture.
 
-B05 — Accounting/replay regression: prove detailed accounting and replay determinism over representative turns.
+B04 — Deterministic RNG: make stochastic behavior reproducible from explicit seed/state; consume P2-S25's provenance decision rather than redefining replay provenance.
 
-B06 — Orders/command validation: enforce valid orders and command semantics at the correct boundary.
+B05 — Accounting/replay regression: prove detailed accounting and replay determinism over representative turns **after P2-S25 is resolved**; do not duplicate command-journal/model-version architecture.
 
-B07 — Turn-entry and map invariants: retain executable checks for turn entry, geographic state, and projection consistency.
+B06 — Orders/command validation: enforce valid orders and command semantics at the correct boundary; command history persistence remains P2-S25 scope.
 
-B08 — One authoritative turn-state commit boundary: consolidate live state mutation so subsystems cannot silently create competing state authorities.
+B07 — Turn-entry and map invariants: retain executable checks for turn entry, geographic state, and projection consistency; do not reopen closed S1-S7 architecture.
+
+B08 — One authoritative turn-state commit boundary: consolidate/verify the final live state mutation boundary **after P2-S20/P2-S28 architectural decisions**; do not duplicate their session or resource-ledger unification work.
 
 B09 — Detection/sensor integration: ensure actual sensor inputs and policies reach detection rather than silently defaulting to unaided detection.
 
-B10 — Combat ruleset isolation and era ownership: maintain separation between core orchestration and era-specific combat behavior.
+B10 — Combat ruleset isolation and era ownership: maintain separation between core orchestration and era-specific combat behavior **after P2-S24/P2-S29 ruleset architecture is settled**; do not duplicate mutable-ruleset or capability-entry fixes.
 
-B11 — Logistics/sustainment semantics: verify resource consumption and recovery rules are explicit and deterministic.
+B11 — Logistics/sustainment semantics: verify resource consumption and recovery rules are explicit and deterministic **using the canonical resource authority established by P2-S21/P2-S23/P2-S28**; do not recreate that architecture here.
 
-B12 — Event/history accounting: ensure events and unit history reconcile with committed state changes.
+B12 — Event/history accounting: ensure events and unit history reconcile with committed state changes; command-journal provenance remains P2-S25 scope.
 
 B13 — Engagement integration: verify canonical detection feeds engagement resolution through the intended interface.
 
-B14 — Scenario validation: reject invalid/incomplete scenarios before simulation.
+B14 — Scenario validation: reject invalid/incomplete scenarios before simulation, including capability checks delegated to P2-S29.
 
-B15 — Serialization/deserialization: round-trip canonical state without semantic loss.
+B15 — Serialization/deserialization: round-trip canonical state without semantic loss, including whatever provenance/resource structures are established by P2-S21/P2-S25.
 
-B16 — CLI/API boundary: keep external interfaces thin and prevent adapter logic from becoming simulation authority.
+B16 — CLI/API boundary: keep external interfaces thin and prevent adapter logic from becoming simulation authority **after P2-S26 establishes the public DWST API boundary**; B16 must validate adapter behavior, not redefine the API architecture.
 
 B17 — Visualization projection: preserve ORBAT Mapper as a consumer/projection layer only.
 
@@ -129,11 +133,11 @@ B20 — Scenario/era fixture coverage: maintain representative fixtures across s
 
 B21 — Performance/resource profile: establish practical runtime/resource expectations for desktop and constrained environments after correctness is stable.
 
-B22 — Full-system simulation test: exercise a representative multi-turn scenario through the complete authoritative pipeline.
+B22 — Full-system simulation test: exercise a representative multi-turn scenario through the complete authoritative pipeline **after the S20-S31 architectural blockers and prerequisite B tasks are resolved**.
 
 B23 — Branch/main integration readiness: verify Phase-2 invariants and CI before merging the refactor branch into main; do not merge merely because individual tasks are green.
 
-B24 — Final legacy-path audit: search the current tree for superseded state/resolution paths and close only those proven dead.
+B24 — Final legacy-path audit: perform the final sweep for superseded paths **after P2-S22/P2-S30 are resolved**; do not duplicate their migration/documentation work.
 
 B25 — Plan/repository synchronization audit: verify every closed plan item against repository evidence before Phase-2 completion.
 
