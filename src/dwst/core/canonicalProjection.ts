@@ -3,11 +3,14 @@ import { resolveCrewRequirement } from './equipmentCatalog';
 import type { EquipmentInstance } from './equipmentInstances';
 import type { InstanceCrewAssignment } from './instanceCrewAssignments';
 import type { PersonnelRegistry } from './personnelRegistry';
+import type { CanonicalConsumableState } from './canonicalConsumables';
 
 export interface CanonicalUnitProjection {
   unitId:string;
   personnel:number;
   equipment:number;
+  ammunition:number;
+  fuel:number;
   equipmentOperational:number;
   equipmentDamaged:number;
   equipmentDestroyed:number;
@@ -18,9 +21,11 @@ export interface CanonicalUnitProjection {
 }
 
 /** Read-only aggregate projection; canonical records remain authoritative. */
-export function projectCanonicalUnit(unitId:string,registry:PersonnelRegistry,instances:EquipmentInstance[],assignments:InstanceCrewAssignment[],definitions:EquipmentDefinition[]):CanonicalUnitProjection{
+export function projectCanonicalUnit(unitId:string,registry:PersonnelRegistry,instances:EquipmentInstance[],assignments:InstanceCrewAssignment[],definitions:EquipmentDefinition[],consumables:CanonicalConsumableState[]):CanonicalUnitProjection{
  const unitPersonnel=registry.personnel.filter(p=>p.unitId===unitId);
  const unitInstances=instances.filter(i=>i.unitId===unitId);
+ const consumable=consumables.find(c=>c.unitId===unitId);
+ if(!consumable) throw new Error(`Missing canonical consumable coverage for unit ${unitId}`);
  const definitionMap=new Map(definitions.map(d=>[d.id,d]));
  const assignedByInstance=new Map<string,InstanceCrewAssignment[]>();
  for(const a of assignments){
@@ -38,5 +43,5 @@ export function projectCanonicalUnit(unitId:string,registry:PersonnelRegistry,in
   crewReady+=Math.min(ready.length,requirement.requiredQualifiedCrew);
   if(ready.length>=requirement.requiredQualifiedCrew) equipmentReady++;
  }
- return {unitId,personnel:unitPersonnel.length,equipment:unitInstances.length,equipmentOperational:unitInstances.filter(i=>i.status==='operational').length,equipmentDamaged:unitInstances.filter(i=>i.status==='damaged').length,equipmentDestroyed:unitInstances.filter(i=>i.status==='destroyed').length,equipmentMissing:unitInstances.filter(i=>i.status==='missing').length,crewRequired,crewReady,equipmentReady};
+ return {unitId,personnel:unitPersonnel.length,equipment:unitInstances.length,ammunition:consumable.ammunition,fuel:consumable.fuel,equipmentOperational:unitInstances.filter(i=>i.status==='operational').length,equipmentDamaged:unitInstances.filter(i=>i.status==='damaged').length,equipmentDestroyed:unitInstances.filter(i=>i.status==='destroyed').length,equipmentMissing:unitInstances.filter(i=>i.status==='missing').length,crewRequired,crewReady,equipmentReady};
 }
