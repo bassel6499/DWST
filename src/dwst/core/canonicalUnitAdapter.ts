@@ -4,6 +4,8 @@ import { projectCanonicalUnit, type CanonicalUnitProjection } from './canonicalP
 export interface CanonicalUnitResources {
   personnel: number;
   equipment: number;
+  ammunition: number;
+  fuel: number;
   equipmentOperational: number;
   equipmentDamaged: number;
   equipmentDestroyed: number;
@@ -26,6 +28,7 @@ export function projectCanonicalUnitResources(
     canonicalState.equipment,
     canonicalState.crewAssignments,
     canonicalState.equipmentDefinitions,
+    canonicalState.consumables,
   );
 
   const equipmentReadiness = projection.equipmentOperational === 0
@@ -35,6 +38,8 @@ export function projectCanonicalUnitResources(
   return {
     personnel: projection.personnel,
     equipment: projection.equipment,
+    ammunition: projection.ammunition,
+    fuel: projection.fuel,
     equipmentOperational: projection.equipmentOperational,
     equipmentDamaged: projection.equipmentDamaged,
     equipmentDestroyed: projection.equipmentDestroyed,
