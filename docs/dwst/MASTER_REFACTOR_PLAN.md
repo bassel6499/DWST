@@ -19,6 +19,14 @@
 11. Phase 2 is tracked as three implementation stages. Closing a stage does not close the phase until the remaining stage backlog and merge gates are satisfied.
 12. Historical findings from older roadmap/audit documents must be promoted into the active backlog when they remain unresolved; they must not disappear merely because a newer milestone was completed.
 13. Every active bug/backlog item must have an explicit status and remain visible until directly verified closed.
+14. An item may not be marked `CLOSED` merely because code exists, tests exist, or CI is green. Closure requires direct verification against the item's stated acceptance criteria and confirmation that the implementation is actually connected to the intended live path.
+15. Do not silently invent or guess repository state, requirements, historical facts, simulation behavior, test outcomes, or missing data. If something is unknown or not directly verified, label it unknown/unverified and inspect it rather than filling the gap with a plausible assumption.
+16. Missing, invalid, unsupported, or ambiguous simulation inputs must not silently receive plausible defaults unless that fallback is explicitly defined by the applicable ruleset or interface contract.
+17. Placeholder coefficients, zero-value capabilities, simplified mechanics, and hard-coded assumptions must be explicitly identified and must not be represented as completed simulation capabilities.
+18. Every authoritative state change must be attributable to an explicit simulation event/delta or documented initialization operation.
+19. Reproducible simulations must identify the exact scenario/data version, ruleset/model version, initial state, command/order log, and RNG seed/state used to produce the result.
+20. Presentation, UI, ORBAT Mapper, and future conversational/AI interfaces must never become alternate simulation authorities or contain authoritative simulation logic.
+21. Simulation-engine correctness and historical-data correctness are separate validation questions. Neither may be used to mask failure of the other.
 
 ## Original roadmap preservation
 
@@ -44,6 +52,8 @@ The older architecture audit established the following refactor sequence and the
 - The Architectural Blueprint/Audit Map is a discovery/debugging map, not an implementation roadmap.
 - CI is a validation gate, not architectural proof.
 - Canonical simulation state owns authoritative records; projections/read models must not silently become authorities.
+- DWST must remain independently usable as a simulation engine without requiring ORBAT Mapper or any other visualization layer. Visualization and conversational interfaces consume DWST outputs; they do not own simulation truth.
+- A conversational/AI interface may translate human intent into validated DWST orders and explain DWST results, but it must never invent outcomes or mutate canonical state directly.
 
 ## Phase 2 — Canonical State / Architecture Refactor
 
@@ -262,7 +272,7 @@ Audit morale, cohesion, experience, training, readiness, fatigue, wear, logistic
 Document and test the intended semantic relationship between direct `simulateTurn()` and session-based `advanceSimulation()`, including baseline/status behavior, so different public entry points cannot silently produce unexpected differences.
 
 ### P2-B26 — Headless DWST / interface independence architecture
-**Status: ACTIVE / DESIGN REQUIREMENT — DEFERRED IMPLEMENTATION
+**Status: ACTIVE / DESIGN REQUIREMENT — DEFERRED IMPLEMENTATION**
 
 DWST must remain independently usable as a simulation engine without requiring ORBAT Mapper for simulation correctness, state authority, turn resolution, or reporting. ORBAT Mapper remains one optional visualization/presentation adapter.
 
