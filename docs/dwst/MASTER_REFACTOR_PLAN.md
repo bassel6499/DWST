@@ -111,7 +111,7 @@ This definition takes precedence over implementation convenience and must be pre
 | ID | Finding | Status | Closure requirement |
 |---|---|---|---|
 | P2-S20 | Two simulation-session paths coexist | OPEN | The production/UI path must use the canonical resource-aware session, or the two session models must be formally unified. No live UI path may bypass canonical resource authority. |
-| P2-S21 | Canonical resource authority is incomplete | OPEN | Extend canonical authority/reconciliation beyond personnel and equipment to every resource represented as authoritative simulation state, including ammunition and fuel, or explicitly redesign those fields as derived projections. |
+| P2-S21 | Canonical resource authority is incomplete | CLOSED | Canonical authority/reconciliation now covers ammunition and fuel in addition to personnel and equipment; canonical projection and live canonical-session commit are verified, with CI green. Actual ammunition consumption/recovery semantics remain a downstream logistics/sustainment concern and are tracked under B11 rather than being folded into S21. |
 | P2-S22 | Legacy pool-based equipment/crew model remains structurally live | OPEN | Remove or quarantine the `EquipmentPool`/`CrewPool` model and migrate all operational consumers to canonical equipment instances/personnel assignments. There must be one equipment/crew accounting architecture. |
 | P2-S23 | Two competing canonical resource representations exist | OPEN | Unify `CanonicalState` record-level authority with the separate `CanonicalResourceLedger` model, or explicitly designate one as non-authoritative compatibility data and remove its authority-bearing APIs. |
 | P2-S24 | Era rulesets are mutable shared objects | OPEN | Make ruleset/configuration immutable or session-owned so one caller cannot mutate global `ERA_RULESETS` and silently alter another simulation. Determinism must include configuration isolation. |
@@ -164,7 +164,7 @@ B09 — Detection/sensor integration: ensure actual sensor inputs and policies r
 
 B10 — Combat ruleset isolation and era ownership: maintain separation between core orchestration and era-specific combat behavior **after P2-S24/P2-S29 ruleset architecture is settled**; do not duplicate mutable-ruleset or capability-entry fixes.
 
-B11 — Logistics/sustainment semantics: verify resource consumption and recovery rules are explicit and deterministic **using the canonical resource authority established by P2-S21/P2-S23/P2-S28**; do not recreate that architecture here.
+B11 — Logistics/sustainment semantics: verify resource consumption and recovery rules are explicit and deterministic **using the canonical resource authority established by P2-S21/P2-S23/P2-S28**, including actual ammunition consumption/recovery behavior as a downstream engine/ruleset concern; do not recreate the canonical resource-authority architecture here.
 
 B12 — Event/history accounting: ensure events and unit history reconcile with committed state changes; command-journal provenance remains P2-S25 scope.
 
