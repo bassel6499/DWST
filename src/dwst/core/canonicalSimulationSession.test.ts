@@ -15,7 +15,7 @@ const policy: CombatAllocationPolicy = {
 
 const unit = (id: string, side: UnitState['side']): UnitState => ({
   id, name: id, side, echelon: 'battalion', personnel: 10, equipment: 10,
-  ammunition: 100, fuel: 100, readiness: 1, training: 1, experience: 1,
+  ammunition: 1, fuel: 1, readiness: 1, training: 1, experience: 1,
   morale: 1, cohesion: 1, fatigue: 0, wear: 0, logistics: 1,
   commandQuality: 1, intelligence: 1, combatPower: 100, status: 'operational',
   position: { lat: 0, lon: 0 }, cumulativeLosses: 0, history: [],
@@ -39,6 +39,10 @@ const canonical = (): CanonicalState => ({
   ],
   crewAssignments: [],
   equipmentDefinitions: [],
+  consumables: [
+    { unitId: 'u1', ammunition: 1, fuel: 1 },
+    { unitId: 'u2', ammunition: 1, fuel: 1 },
+  ],
 });
 
 describe('canonical simulation session', () => {
@@ -47,8 +51,11 @@ describe('canonical simulation session', () => {
     const session = startCanonicalSimulation(input, canonical());
     assert.equal(session.state.units.u1.personnel, 10);
     assert.equal(session.state.units.u1.equipment, 10);
+    assert.equal(session.state.units.u1.ammunition, 1);
+    assert.equal(session.state.units.u1.fuel, 1);
     assert.equal(session.state.units.u1.position.lat, 0);
     assert.equal(session.canonical.personnel.personnel.length, 20);
+    assert.equal(session.canonical.consumables.length, 2);
     assert.notStrictEqual(session.state, input);
   });
 
@@ -61,8 +68,12 @@ describe('canonical simulation session', () => {
         .filter((record) => record.unitId === unit.id && record.status === 'assigned').length;
       const canonicalEquipment = result.session.canonical.equipment
         .filter((instance) => instance.unitId === unit.id && instance.status === 'operational').length;
+      const canonicalConsumables = result.session.canonical.consumables.find((record) => record.unitId === unit.id);
+      assert.ok(canonicalConsumables);
       assert.equal(unit.personnel, canonicalPersonnel);
       assert.equal(unit.equipment, canonicalEquipment);
+      assert.equal(unit.ammunition, canonicalConsumables.ammunition);
+      assert.equal(unit.fuel, canonicalConsumables.fuel);
     }
 
     const totalKilled = result.session.canonical.personnel.personnel
@@ -71,6 +82,7 @@ describe('canonical simulation session', () => {
       .filter((instance) => instance.status === 'destroyed').length;
     assert.equal(totalKilled, 20 - result.report.units.reduce((sum, unit) => sum + unit.personnel, 0));
     assert.equal(totalDestroyed, 20 - result.report.units.reduce((sum, unit) => sum + unit.equipment, 0));
+    assert.equal(result.session.state.units.u1.fuel, result.session.canonical.consumables.find((record) => record.unitId === 'u1')?.fuel);
   });
 
   it('does not mutate the original canonical state or scenario', () => {
