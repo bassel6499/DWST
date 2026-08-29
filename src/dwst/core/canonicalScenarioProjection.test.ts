@@ -32,35 +32,42 @@ const canonical: CanonicalState = {
   ],
   crewAssignments: [],
   equipmentDefinitions: [],
+  consumables: [{ unitId: 'u1', ammunition: 0.65, fuel: 0.45 }],
 };
 
 describe('canonical scenario resource projection', () => {
-  it('reconciles personnel and equipment aggregates from canonical records', () => {
+  it('reconciles personnel, equipment, ammunition, and fuel from canonical records', () => {
     const next = reconcileScenarioResourceAggregates(scenario, canonical);
     expect(next.units.u1.personnel).toBe(2);
     expect(next.units.u1.equipment).toBe(2);
+    expect(next.units.u1.ammunition).toBe(0.65);
+    expect(next.units.u1.fuel).toBe(0.45);
     expect(next.units.u1.readiness).toBe(scenario.units.u1.readiness);
     expect(next.units.u1.position).toEqual(scenario.units.u1.position);
     expect(scenario.units.u1.personnel).toBe(99);
   });
 
-  it('rejects silent zeroing when a non-zero aggregate has no canonical ownership coverage', () => {
+  it('rejects silent zeroing when canonical ownership coverage is absent', () => {
     const emptyCanonical: CanonicalState = {
       personnel: { personnel: [] }, equipment: [], crewAssignments: [], equipmentDefinitions: [],
+      consumables: [],
     };
     expect(() => reconcileScenarioResourceAggregates(scenario, emptyCanonical))
-      .toThrow('Missing canonical personnel coverage for unit u1');
+      .toThrow('Missing canonical consumable coverage for unit u1');
   });
 
-  it('allows an intentionally empty canonical resource set for a zero aggregate', () => {
+  it('allows an intentionally empty personnel/equipment canonical set for a zero aggregate', () => {
     const zeroScenario: ScenarioState = {
       ...scenario,
       units: { u1: { ...scenario.units.u1, personnel: 0, equipment: 0 } },
     };
     const next = reconcileScenarioResourceAggregates(zeroScenario, {
       personnel: { personnel: [] }, equipment: [], crewAssignments: [], equipmentDefinitions: [],
+      consumables: [{ unitId: 'u1', ammunition: 0, fuel: 0 }],
     });
     expect(next.units.u1.personnel).toBe(0);
     expect(next.units.u1.equipment).toBe(0);
+    expect(next.units.u1.ammunition).toBe(0);
+    expect(next.units.u1.fuel).toBe(0);
   });
 });
