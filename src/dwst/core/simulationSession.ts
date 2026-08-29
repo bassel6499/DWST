@@ -22,6 +22,7 @@ const cloneScenario = (state: ScenarioState): ScenarioState => ({
     order: unit.order ? { ...unit.order, destination: unit.order.destination ? { ...unit.order.destination } : undefined } : undefined,
     history: unit.history.map((event) => ({ ...event })),
   }])),
+  locations: state.locations?.map((location) => ({ ...location, position: { ...location.position } })),
   events: state.events.map((event) => ({ ...event, unitIds: [...event.unitIds] })),
 });
 
