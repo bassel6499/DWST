@@ -190,7 +190,7 @@ B11 — Logistics/sustainment semantics: **CLOSED / DEFERRED IMPLEMENTATION.** B
 
 B12 — Event/history accounting: **CLOSED / PASS.** Direct inspection found that turn resolution and canonical commit lacked a reliable projection from resolved state-changing actions into per-unit history. B12 was implemented with a narrow history-projection path so movement/combat state changes generate corresponding unit-history records while canonical state remains authoritative. Regression coverage verifies movement history, combat history for affected units, loss reconciliation, committed history, and resolution immutability. Validation CI run 33328862760 is green (type-check and full unit test suite).
 
-B13 — Engagement integration: verify canonical detection feeds engagement resolution through the intended interface.
+B13 — Engagement integration: **CLOSED / PASS.** Direct inspection verified that canonical `detectContacts()` consumes the era detection policy and scenario-owned sensors, and that `resolveEngagements()` feeds detected opposing contacts into the era-owned combat resolver through the intended interface. The complete `resolveTurn()` path then applies the engagement result through the canonical combat/resource application boundary. Existing B13 regression coverage verifies sensor-dependent engagement creation and attacker/defender identification. No B13 code change was required.
 
 B14 — Scenario validation: reject invalid/incomplete scenarios before simulation, including capability checks delegated to P2-S29.
 
