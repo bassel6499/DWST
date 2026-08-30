@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'vitest';
-import { projectEquipmentPoolReadiness } from './equipmentReadiness';
+import { projectEquipmentReadiness } from './equipmentReadiness';
 
 describe('equipment readiness',()=>{
  const defs:any=[
@@ -19,8 +19,8 @@ describe('equipment readiness',()=>{
  for(let i=1;i<=6;i++) assignments.push({instanceId:'at-1',slot:i,personnelId:`A${i}`,specialty:'atGunCrew'});
  for(let i=1;i<=8;i++) assignments.push({instanceId:'arty-1',slot:i,personnelId:`R${i}`,specialty:'artilleryCrew'});
  it('projects readiness independently for tanks, AT guns and artillery',()=>{
-  assert.deepEqual(projectEquipmentPoolReadiness(defs[0],instances,assignments,{personnel}),{definitionId:'tank',operational:2,crewReady:2,combatReady:2,uncrewed:0});
-  assert.deepEqual(projectEquipmentPoolReadiness(defs[1],instances,assignments,{personnel}),{definitionId:'at',operational:1,crewReady:1,combatReady:1,uncrewed:0});
-  assert.deepEqual(projectEquipmentPoolReadiness(defs[2],instances,assignments,{personnel}),{definitionId:'arty',operational:1,crewReady:1,combatReady:1,uncrewed:0});
+  assert.deepEqual(projectEquipmentReadiness(defs[0],instances,assignments,{personnel}),{definitionId:'tank',operational:2,crewReady:2,combatReady:2,uncrewed:0});
+  assert.deepEqual(projectEquipmentReadiness(defs[1],instances,assignments,{personnel}),{definitionId:'at',operational:1,crewReady:1,combatReady:1,uncrewed:0});
+  assert.deepEqual(projectEquipmentReadiness(defs[2],instances,assignments,{personnel}),{definitionId:'arty',operational:1,crewReady:1,combatReady:1,uncrewed:0});
  });
 });
