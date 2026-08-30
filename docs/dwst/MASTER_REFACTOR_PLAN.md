@@ -7,7 +7,7 @@ Refactor DWST into a deterministic, testable, era-aware simulation engine with e
 
 DWST is a **generic simulation core**, not an individual historical scenario and not a graphics application. The Core provides the reusable simulation machinery; era packages and scenarios provide the content/configuration that the Core executes.
 
-The authoritative conceptual flow is:
+The authoritative conceptual flow:
 
 `user selects era + scenario → validate/load era package and scenario → DWST Core executes → state/report outputs → consumers render or present the results`
 
