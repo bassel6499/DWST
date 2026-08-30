@@ -31,7 +31,7 @@ const canonical: CanonicalState = {
     { instanceId: 'e2', definitionId: 'eq', unitId: 'u1', status: 'destroyed' },
   ],
   crewAssignments: [],
-  equipmentDefinitions: [],
+  equipmentDefinitions: [{ id: 'eq', name: 'WWII tank', era: 'WWII', equipmentType: 'tank', crewRequirementId: 'WWII:tank:tankCrew' }],
   consumables: [{ unitId: 'u1', ammunition: 0.65, fuel: 0.45 }],
 };
 
