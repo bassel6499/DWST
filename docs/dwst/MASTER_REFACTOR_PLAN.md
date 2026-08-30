@@ -125,6 +125,25 @@ This definition takes precedence over implementation convenience and must be pre
 
 **Scope rule for S20-S31:** these are architectural blockers discovered by the whole-repository audit. Their implementation and closure must be handled as their own findings. Existing B-series items must not re-open, duplicate, or claim closure of these findings. A B-series item may depend on an S20-S31 fix or validate a downstream invariant, but it must not silently absorb the S20-S31 scope.
 
+## Verified audit non-findings / do-not-reopen register
+
+The following items were directly inspected during whole-system audit and are **not architectural problems under the current repository architecture**. They must not be reopened merely because the same code pattern is encountered again. A future audit may reopen an item only if new direct evidence demonstrates a regression or contradicts the stated boundary.
+
+1. **S28 aggregate before/after resource reconstruction:** ruled out in the current canonical path. `resolveTurn()` produces explicit typed resource deltas; the canonical session consumes those deltas; projection does not reconstruct resource losses from aggregate before/after differences.
+2. **A second live combat authority in `rulesets.ts`:** ruled out. `rulesets.ts` is a compatibility view over `ERA_RULESETS`, not a second registry or combat implementation.
+3. **`applyTurn()` calculating canonical resource losses:** ruled out. The canonical session commits explicit canonical resource deltas; `applyTurn()` applies an already-produced report and does not replace canonical accounting.
+4. **Canonical projection reconstructing resource losses:** ruled out. Projection reads canonical personnel/equipment/consumable records and creates legacy aggregate views; it does not infer losses from aggregate state differences.
+5. **ScenarioStore secretly replacing DWST canonical state:** not demonstrated. ScenarioStore maintains its own operational/time projection, but the audit found no verified bridge making it the DWST canonical simulation authority. Do not treat it as a competing DWST simulation engine without direct evidence of such a bridge.
+6. **Positive consumable deltas as an S-series architectural violation:** ruled out as an S-series issue. Actual ammunition/fuel consumption and recovery semantics are downstream B11 concerns; canonical architecture does not itself impose WW2 logistics semantics.
+7. **WW2 adapter zero-valued supporting factors automatically meaning broken WW2 combat:** ruled out. Direct WW2 tests establish intentional current behavior for the inspected factors; zero values alone are not evidence of an architectural defect.
+8. **Public `applyTurn()` creating a public simulation-authority bypass:** not demonstrated. It is not exposed as the public package API, so its existence is not equivalent to an externally reachable authoritative bypass.
+9. **S28 requiring removal of every legacy projection helper:** ruled out. S28 requires elimination of inferred resource-delta accounting, not deletion of every helper that applies an already-resolved report to a projected legacy state.
+10. **S21 requiring monotonic ammunition/fuel consumption at the canonical commit layer:** ruled out. The master plan explicitly separates canonical resource authority from downstream logistics/sustainment semantics tracked under B11.
+
+### Audit rule for the non-findings register
+
+These are verified exclusions, not implementation TODOs. Future work must preserve the stated boundaries and should add a new finding only when direct repository evidence shows an actual authority violation, semantic contradiction, regression, or plan requirement that is not covered here.
+
 ### S27 — Canonical resource accounting bridge
 
 **Status: CLOSED**
