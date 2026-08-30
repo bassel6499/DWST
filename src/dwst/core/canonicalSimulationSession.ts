@@ -58,9 +58,13 @@ export function startCanonicalSimulation(
   rules: EraRuleset = getEraRuleset(state.era),
 ): CanonicalSimulationSession {
   if (!rules) throw new Error('No ruleset selected');
-  const capabilityErrors = validateEraRuleset(rules);
-  if (capabilityErrors.length > 0) {
-    throw new Error(`Era ${rules.id} is not runnable: ${capabilityErrors.join('; ')}`);
+  const capabilityErrors: string[] = [];
+  if (!rules.implemented) capabilityErrors.push('ruleset is not implemented');
+  if (!rules.resolveCombat) capabilityErrors.push('required combat implementation is missing');
+  const validationErrors = validateEraRuleset(rules);
+  const errors = [...capabilityErrors, ...validationErrors];
+  if (errors.length > 0) {
+    throw new Error(`Era ${rules.id} is not runnable: ${errors.join('; ')}`);
   }
   const projectedState = reconcileScenarioResourceAggregates(state, canonical);
   return {
