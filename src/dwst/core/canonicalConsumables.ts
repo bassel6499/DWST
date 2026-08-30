@@ -40,3 +40,16 @@ export function commitCanonicalConsumableState(
   if (!found) throw new Error(`Missing canonical consumable record for unit ${next.unitId}`);
   return records.map((record) => record.unitId === next.unitId ? { ...next } : { ...record });
 }
+
+/** Apply an explicit typed consumable delta to the authoritative canonical record. */
+export function commitCanonicalConsumableDelta(
+  records: CanonicalConsumableState[],
+  delta: { unitId: string; ammunition: number; fuel: number },
+): CanonicalConsumableState[] {
+  const current = projectCanonicalConsumables(delta.unitId, records);
+  return commitCanonicalConsumableState(records, {
+    unitId: delta.unitId,
+    ammunition: current.ammunition + delta.ammunition,
+    fuel: current.fuel + delta.fuel,
+  });
+}
