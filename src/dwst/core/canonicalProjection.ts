@@ -1,5 +1,5 @@
 import type { EquipmentDefinition } from './equipmentCatalog';
-import { resolveCrewRequirement } from './equipmentCatalog';
+import { resolveCrewRequirement, validateEquipmentDefinition } from './equipmentCatalog';
 import type { EquipmentInstance } from './equipmentInstances';
 import type { InstanceCrewAssignment } from './instanceCrewAssignments';
 import type { PersonnelRegistry } from './personnelRegistry';
@@ -37,6 +37,8 @@ export function projectCanonicalUnit(unitId:string,registry:PersonnelRegistry,in
   if(instance.status!=='operational') continue;
   const definition=definitionMap.get(instance.definitionId);
   if(!definition) throw new Error(`Missing equipment definition ${instance.definitionId} for unit ${unitId}`);
+  const validationErrors=validateEquipmentDefinition(definition);
+  if(validationErrors.length) throw new Error(`Invalid equipment definition ${definition.id} for unit ${unitId}: ${validationErrors.join('; ')}`);
   const requirement=resolveCrewRequirement(definition);
   crewRequired+=requirement.requiredQualifiedCrew;
   const assigned=assignedByInstance.get(instance.instanceId)??[];
