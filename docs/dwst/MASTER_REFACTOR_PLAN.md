@@ -139,6 +139,9 @@ The following items were directly inspected during whole-system audit and are **
 8. **Public `applyTurn()` creating a public simulation-authority bypass:** not demonstrated. It is not exposed as the public package API, so its existence is not equivalent to an externally reachable authoritative bypass.
 9. **S28 requiring removal of every legacy projection helper:** ruled out. S28 requires elimination of inferred resource-delta accounting, not deletion of every helper that applies an already-resolved report to a projected legacy state.
 10. **S21 requiring monotonic ammunition/fuel consumption at the canonical commit layer:** ruled out. The master plan explicitly separates canonical resource authority from downstream logistics/sustainment semantics tracked under B11.
+11. **Public executable era capability objects being an authoritative simulation bypass:** ruled out as a demonstrated problem. The public boundary intentionally exposes supported rules/ruleset contracts, while the internal turn-state mutation pipeline is not exposed as a consumer-facing authority. Public-boundary tests exercise the canonical session entry points rather than direct internal mutation.
+12. **Bootstrap/selection being an established consumer bypass:** ruled out as a demonstrated problem. The inspected public integration path enters through `startCanonicalSimulation()` and `advanceCanonicalSimulation()`, consistent with the documented `consumer → public DWST API → canonical Core session → state/report outputs` architecture. No direct public `applyTurn()` authority was established.
+13. **ScenarioStore merely having its own operational/time projection being a competing DWST authority:** ruled out absent an actual authority-crossing bridge. Its independent projection is not itself evidence of a second DWST simulation engine; future work should require direct evidence of a bridge before reopening this concern.
 
 ### Audit rule for the non-findings register
 
