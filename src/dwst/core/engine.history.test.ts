@@ -64,7 +64,7 @@ describe('event and unit-history reconciliation', () => {
 
   it('records combat history for both participants and reconciles losses', () => {
     const input = scenario({
-      attacker: unit('attacker', 'allied'),
+      attacker: unit('attacker', 'allied', { type: 'attack', targetUnitId: 'defender' }),
       defender: unit('defender', 'enemy'),
     });
 
@@ -72,7 +72,7 @@ describe('event and unit-history reconciliation', () => {
     const combat = report.events.find((event) => event.phase === 'combat');
 
     assert.ok(combat);
-    assert.deepEqual(combat.unitIds.sort(), ['attacker', 'defender']);
+    assert.deepEqual([...combat.unitIds].sort(), ['attacker', 'defender']);
 
     const attacker = report.units.find((candidate) => candidate.id === 'attacker')!;
     const defender = report.units.find((candidate) => candidate.id === 'defender')!;
