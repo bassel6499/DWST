@@ -1,5 +1,4 @@
-import type { PersonnelStatus } from './canonicalLedger';
-import type { PersonnelRecord, PersonnelRegistry } from './personnelRegistry';
+import type { PersonnelRecord, PersonnelRegistry, PersonnelStatus } from './personnelRegistry';
 
 export interface PersonnelOperation { kind:'setStatus'; personnelId:string; status:PersonnelStatus; }
 export interface PersonnelTransitionResult { registry:PersonnelRegistry; errors:string[]; }
@@ -17,10 +16,4 @@ export function applyPersonnelOperations(input:PersonnelRegistry, operations:Per
   }
   if(errors.length)return {registry:input,errors};
   return {registry:next,errors:[]};
-}
-
-export function assertPersonnelLedgerMatchesRegistry(registry:PersonnelRegistry, counts:Record<PersonnelStatus,number>):string[]{
-  const actual:Record<PersonnelStatus,number>={available:0,training:0,assigned:0,wounded:0,killed:0,missing:0};
-  for(const p of registry.personnel) actual[p.status]++;
-  return (Object.keys(actual) as PersonnelStatus[]).filter(s=>actual[s]!==counts[s]).map(s=>`Personnel status mismatch for ${s}: registry=${actual[s]}, ledger=${counts[s]}`);
 }
