@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { ScenarioState } from '@/dwst/core/types';
-import { scenarioToGeoJSON } from '@/dwst/core/mapState';
+import type { ScenarioState } from '@/dwst';
+import { scenarioToGeoJSON } from '@/dwst';
 
 const props = defineProps<{ state: ScenarioState }>();
 const geojson = computed(() => scenarioToGeoJSON(props.state));
