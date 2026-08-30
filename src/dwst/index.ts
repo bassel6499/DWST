@@ -68,6 +68,8 @@ export {
   type UnitState,
   type Order,
   type ScenarioLocation,
+  type Sensor,
+  type SensorType,
   type ScenarioState,
   type UnitEvent,
   type SimulationEvent,
