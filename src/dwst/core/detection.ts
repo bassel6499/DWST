@@ -1,11 +1,11 @@
 import { geographicDistanceMeters } from './geographicMovement';
 import { DEFAULT_DETECTION_POLICY, type DetectionPolicy } from './eraRules';
-import type { ScenarioState, UnitState } from './types';
+import type { ScenarioState, UnitState, Sensor } from './types';
 
 const clamp = (v: number, min = 0, max = 1) => Math.max(min, Math.min(max, v));
 const km = (a: UnitState['position'], b: UnitState['position']) => geographicDistanceMeters(a, b) / 1000;
-export type SensorType = 'visual' | 'recon' | 'airRecon' | 'signals';
-export interface Sensor { id: string; unitId: string; type: SensorType; rangeKm: number; quality: number; }
+export type { Sensor } from './types';
+export type { SensorType } from './types';
 export interface Contact { observerId: string; targetId: string; distanceKm: number; probability: number; detected: boolean; confidence: 'unknown' | 'unit' | 'formation'; }
 export interface DetectionState { contacts: Record<string, Contact[]>; }
 
