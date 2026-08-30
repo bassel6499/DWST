@@ -1,8 +1,9 @@
-import type { UnitState } from './types';
+import type { ResourceDelta, UnitState } from './types';
 
 export interface CombatApplicationResult {
   attacker: UnitState;
   defender: UnitState;
+  resourceDeltas: [ResourceDelta, ResourceDelta];
 }
 
 const clamp = (v: number, min = 0, max = 1) => Math.max(min, Math.min(max, v));
@@ -38,5 +39,12 @@ export function applyCombatResult(
     readiness: clamp(defender.readiness - defenderLosses / Math.max(defender.personnel, 1) * 0.35),
   };
 
-  return { attacker: nextAttacker, defender: nextDefender };
+  return {
+    attacker: nextAttacker,
+    defender: nextDefender,
+    resourceDeltas: [
+      { unitId: attacker.id, personnel: -attackerLosses, equipment: -attackerEquipmentLosses, ammunition: 0, fuel: 0 },
+      { unitId: defender.id, personnel: -defenderLosses, equipment: -defenderEquipmentLosses, ammunition: 0, fuel: 0 },
+    ],
+  };
 }
