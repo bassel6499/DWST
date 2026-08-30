@@ -10,29 +10,29 @@ export type CombatLaw =
   | 'extended-square';
 
 export interface EngineCoefficients {
-  movementHours: number;
-  movementReadinessWeight: number;
-  movementCommandWeight: number;
-  movementFatigue: number;
-  movementWear: number;
-  movementFuel: number;
-  turnFatigue: number;
-  logisticsDrain: number;
-  readinessDrain: number;
-  readinessLogisticsWeight: number;
-  readinessFatiguePenalty: number;
-  readinessWearPenalty: number;
-  trainingEffect: number;
-  experienceEffect: number;
-  cohesionEffect: number;
-  moraleEffect: number;
-  commandEffect: number;
+  readonly movementHours: number;
+  readonly movementReadinessWeight: number;
+  readonly movementCommandWeight: number;
+  readonly movementFatigue: number;
+  readonly movementWear: number;
+  readonly movementFuel: number;
+  readonly turnFatigue: number;
+  readonly logisticsDrain: number;
+  readonly readinessDrain: number;
+  readonly readinessLogisticsWeight: number;
+  readonly readinessFatiguePenalty: number;
+  readonly readinessWearPenalty: number;
+  readonly trainingEffect: number;
+  readonly experienceEffect: number;
+  readonly cohesionEffect: number;
+  readonly moraleEffect: number;
+  readonly commandEffect: number;
 }
 
 export interface UnitAssessmentPolicy {
-  destroyedPersonnel: number;
-  disorganizedPersonnel: number;
-  disorganizedCondition: number;
+  readonly destroyedPersonnel: number;
+  readonly disorganizedPersonnel: number;
+  readonly disorganizedCondition: number;
 }
 
 export type DetectionSensorType = 'visual' | 'recon' | 'airRecon' | 'signals';
@@ -43,18 +43,18 @@ export type DetectionSensorType = 'visual' | 'recon' | 'airRecon' | 'signals';
  * bookkeeping or geographic distance logic.
  */
 export interface DetectionPolicy {
-  baseUnaidedRangeKm: number;
-  sensorRangeModifiers: Record<DetectionSensorType, number>;
-  intelligenceFloor: number;
-  intelligenceWeight: number;
-  readinessFloor: number;
-  readinessWeight: number;
-  weatherFloor: number;
-  weatherWeight: number;
-  terrainFloor: number;
-  terrainWeight: number;
-  formationConfidenceThreshold: number;
-  unitConfidenceThreshold: number;
+  readonly baseUnaidedRangeKm: number;
+  readonly sensorRangeModifiers: Readonly<Record<DetectionSensorType, number>>;
+  readonly intelligenceFloor: number;
+  readonly intelligenceWeight: number;
+  readonly readinessFloor: number;
+  readonly readinessWeight: number;
+  readonly weatherFloor: number;
+  readonly weatherWeight: number;
+  readonly terrainFloor: number;
+  readonly terrainWeight: number;
+  readonly formationConfidenceThreshold: number;
+  readonly unitConfidenceThreshold: number;
 }
 
 export interface CombatResult {
@@ -72,25 +72,35 @@ export type CombatResolver = (input: {
 }) => CombatResult;
 
 export interface EraRuleset {
-  id: EraId;
-  label: string;
-  implemented: boolean;
-  combatLaw: CombatLaw;
-  rangedFire: boolean;
-  spatialModel: 'none' | 'pde' | 'pde-hybrid';
-  defaultTurnHours: number;
-  equipmentCrewCoupling: boolean;
-  permanentAttrition: boolean;
-  logisticsEnabled: boolean;
-  engine: EngineCoefficients;
-  unitAssessment: UnitAssessmentPolicy;
-  detection: DetectionPolicy;
+  readonly id: EraId;
+  readonly label: string;
+  readonly implemented: boolean;
+  readonly combatLaw: CombatLaw;
+  readonly rangedFire: boolean;
+  readonly spatialModel: 'none' | 'pde' | 'pde-hybrid';
+  readonly defaultTurnHours: number;
+  readonly equipmentCrewCoupling: boolean;
+  readonly permanentAttrition: boolean;
+  readonly logisticsEnabled: boolean;
+  readonly engine: EngineCoefficients;
+  readonly unitAssessment: UnitAssessmentPolicy;
+  readonly detection: DetectionPolicy;
   /** Combat implementation owned by this era. Absent means the era is not runnable. */
-  resolveCombat?: CombatResolver;
-  notes: string[];
+  readonly resolveCombat?: CombatResolver;
+  readonly notes: readonly string[];
 }
 
-export const DEFAULT_ENGINE: Readonly<EngineCoefficients> = {
+function deepFreeze<T extends object>(value: T): Readonly<T> {
+  for (const key of Reflect.ownKeys(value)) {
+    const child = value[key as keyof T];
+    if (child !== null && typeof child === 'object' && !Object.isFrozen(child)) {
+      deepFreeze(child as object);
+    }
+  }
+  return Object.freeze(value);
+}
+
+export const DEFAULT_ENGINE: Readonly<EngineCoefficients> = deepFreeze({
   movementHours: 6,
   movementReadinessWeight: 0.65,
   movementCommandWeight: 0.3,
@@ -108,9 +118,9 @@ export const DEFAULT_ENGINE: Readonly<EngineCoefficients> = {
   cohesionEffect: 0.25,
   moraleEffect: 0.25,
   commandEffect: 0.2,
-};
+});
 
-export const DEFAULT_DETECTION_POLICY: Readonly<DetectionPolicy> = {
+export const DEFAULT_DETECTION_POLICY: Readonly<DetectionPolicy> = deepFreeze({
   baseUnaidedRangeKm: 12,
   sensorRangeModifiers: {
     visual: 1,
@@ -128,13 +138,13 @@ export const DEFAULT_DETECTION_POLICY: Readonly<DetectionPolicy> = {
   terrainWeight: 0.25,
   formationConfidenceThreshold: 0.85,
   unitConfidenceThreshold: 0.55,
-};
+});
 
-const DEFAULT_UNIT_ASSESSMENT: UnitAssessmentPolicy = {
+const DEFAULT_UNIT_ASSESSMENT: Readonly<UnitAssessmentPolicy> = deepFreeze({
   destroyedPersonnel: 0.2,
   disorganizedPersonnel: 0.5,
   disorganizedCondition: 0.4,
-};
+});
 
 const scaffoldNotes = [
   'Ruleset scaffold only; not runnable until its era-specific mechanics are implemented and validated.',
@@ -188,7 +198,7 @@ const base = (
   notes: [...scaffoldNotes],
 });
 
-export const ERA_RULESETS: Record<EraId, EraRuleset> = {
+export const ERA_RULESETS: Readonly<Record<EraId, EraRuleset>> = deepFreeze({
   ancient: { ...base('ancient', 'Ancient', 'linear', 24), rangedFire: false, spatialModel: 'pde' },
   medieval: { ...base('medieval', 'Medieval', 'mixed', 12), spatialModel: 'pde' },
   'early-modern': base('early-modern', 'Early Modern', 'new-square', 12),
@@ -206,7 +216,7 @@ export const ERA_RULESETS: Record<EraId, EraRuleset> = {
   'post-cold-war': base('post-cold-war', 'Post-Cold War', 'contemporary-hybrid', 3),
   contemporary: base('contemporary', 'Contemporary', 'contemporary-hybrid', 1),
   future: base('future', 'Future', 'extended-square', 1),
-};
+});
 
 export function getEraRuleset(id: EraId): EraRuleset {
   return ERA_RULESETS[id];
