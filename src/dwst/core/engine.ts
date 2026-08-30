@@ -4,6 +4,7 @@ import { assessUnit } from './unitAssessment';
 import type { SimulationBaseline } from './simulationBaseline';
 import { resolveEngagements } from './combat';
 import { applyCombatResult } from './combatState';
+import { unitEventsFromSimulationEvent } from './unitHistory';
 import { geographicDistanceMeters, interpolateGeographicPosition } from './geographicMovement';
 
 const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
@@ -74,7 +75,12 @@ export function resolveTurn(state: ScenarioState, rules: EraRuleset = getEraRule
   const units = Object.values(state.units).map((unit) => {
     const next = { ...unit, position: { ...unit.position }, history: [...unit.history] };
     const movement = resolveMovement(next, hours, rules.engine);
-    if (movement.event) events.push({ ...movement.event, turn });
+    if (movement.event) {
+      const event = { ...movement.event, turn };
+      events.push(event);
+      const historyEntries = unitEventsFromSimulationEvent(event);
+      for (const entry of historyEntries) next.history.push(entry.event);
+    }
     recordDelta({ unitId: next.id, personnel: 0, equipment: 0, ammunition: 0, fuel: movement.fuelDelta });
     const scale = hours / rules.engine.movementHours;
     next.fatigue = clamp(next.fatigue + rules.engine.turnFatigue * scale);
@@ -97,7 +103,16 @@ export function resolveTurn(state: ScenarioState, rules: EraRuleset = getEraRule
     resolvedState.units[attacker.id] = applied.attacker;
     resolvedState.units[defender.id] = applied.defender;
     for (const delta of applied.resourceDeltas) recordDelta(delta);
-    events.push({ turn, phase: 'combat', message: engagement.result, unitIds: [attacker.id, defender.id] });
+    const event: SimulationEvent = { turn, phase: 'combat', message: engagement.result, unitIds: [attacker.id, defender.id] };
+    events.push(event);
+
+    const lossesByUnit = {
+      [attacker.id]: { personnelLosses: -applied.resourceDeltas[0].personnel, equipmentLosses: -applied.resourceDeltas[0].equipment },
+      [defender.id]: { personnelLosses: -applied.resourceDeltas[1].personnel, equipmentLosses: -applied.resourceDeltas[1].equipment },
+    };
+    for (const entry of unitEventsFromSimulationEvent(event, lossesByUnit)) {
+      resolvedState.units[entry.unitId].history.push(entry.event);
+    }
   }
 
   return {
