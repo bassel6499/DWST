@@ -1,4 +1,5 @@
 import type { PersonnelRecord, PersonnelRegistry, PersonnelStatus } from './personnelRegistry';
+import { personnelStatusCounts } from './personnelRegistry';
 
 export interface PersonnelOperation { kind:'setStatus'; personnelId:string; status:PersonnelStatus; }
 export interface PersonnelTransitionResult { registry:PersonnelRegistry; errors:string[]; }
@@ -16,4 +17,21 @@ export function applyPersonnelOperations(input:PersonnelRegistry, operations:Per
   }
   if(errors.length)return {registry:input,errors};
   return {registry:next,errors:[]};
+}
+
+/**
+ * Compatibility validator for callers that still compare derived personnel counts.
+ * It does not maintain or read a legacy ledger; counts are always derived from the
+ * canonical PersonnelRegistry.
+ */
+export function assertPersonnelLedgerMatchesRegistry(
+  registry:PersonnelRegistry,
+  expected:Record<PersonnelStatus,number>,
+):string[] {
+  const actual=personnelStatusCounts(registry);
+  const errors:string[]=[];
+  for(const status of Object.keys(actual) as PersonnelStatus[]) {
+    if(actual[status]!==expected[status]) errors.push(`Personnel ${status} count mismatch: expected ${expected[status]}, got ${actual[status]}`);
+  }
+  return errors;
 }
