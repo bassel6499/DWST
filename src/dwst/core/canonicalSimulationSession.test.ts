@@ -74,6 +74,34 @@ describe('canonical simulation session', () => {
     );
   });
 
+  it('rejects implicit personnel and equipment ownership', () => {
+    const source = canonical();
+    const missingPersonnelOwnership = structuredClone(source);
+    delete (missingPersonnelOwnership.personnel.personnel[0] as { unitId?: string }).unitId;
+    assert.throws(
+      () => startCanonicalSimulation(scenario(), missingPersonnelOwnership),
+      /Personnel ownership must be explicit: p1-0/,
+    );
+
+    const missingEquipmentOwnership = structuredClone(source);
+    delete (missingEquipmentOwnership.equipment[0] as { unitId?: string }).unitId;
+    assert.throws(
+      () => startCanonicalSimulation(scenario(), missingEquipmentOwnership),
+      /Equipment ownership must be explicit: e1-0/,
+    );
+  });
+
+  it('accepts explicit null ownership for non-unit personnel and equipment', () => {
+    const source = canonical();
+    source.personnel.personnel[0].unitId = null;
+    source.equipment[0].unitId = null;
+    const session = startCanonicalSimulation(scenario(), source);
+    assert.equal(session.canonical.personnel.personnel[0].unitId, null);
+    assert.equal(session.canonical.equipment[0].unitId, null);
+    assert.equal(session.state.units.u1.personnel, 9);
+    assert.equal(session.state.units.u1.equipment, 9);
+  });
+
   it('records an ordered command journal without changing turn resolution', () => {
     const session = startCanonicalSimulation(scenario(), canonical());
     const result = advanceCanonicalSimulation(session, policy);
