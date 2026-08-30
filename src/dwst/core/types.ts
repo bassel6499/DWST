@@ -21,4 +21,14 @@ export interface ScenarioLocation { id:string; name:string; position:WorldPositi
 export interface ScenarioState { id:string; name:string; era:EraId; scale:Scale; turnHours:number; elapsedHours:number; weather:number; terrain:number; intelLevel:number; units:Record<string,UnitState>; events:SimulationEvent[]; locations?:ScenarioLocation[]; }
 export interface UnitEvent { turn:number; type:string; summary:string; personnelLosses?:number; equipmentLosses?:number; }
 export interface SimulationEvent { turn:number; phase:'movement'|'combat'|'sustainment'|'command'; message:string; unitIds:string[]; }
-export interface SimulationReport { turn:number; elapsedHours:number; events:SimulationEvent[]; units:UnitState[]; }
+
+/** Explicit resource changes produced by a turn; consumers must not infer deltas from projected aggregates. */
+export interface ResourceDelta {
+  unitId:string;
+  personnel:number;
+  equipment:number;
+  ammunition:number;
+  fuel:number;
+}
+
+export interface SimulationReport { turn:number; elapsedHours:number; events:SimulationEvent[]; units:UnitState[]; resourceDeltas:ResourceDelta[]; }
