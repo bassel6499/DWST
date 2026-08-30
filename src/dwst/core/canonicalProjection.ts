@@ -20,8 +20,21 @@ export interface CanonicalUnitProjection {
   equipmentReady:number;
 }
 
-/** Read-only aggregate projection; canonical records remain authoritative. */
+/**
+ * Read-only aggregate projection; canonical records remain authoritative.
+ * Ownership is explicit: a record either names its owning unit or explicitly
+ * uses null for non-unit/unassigned ownership. An omitted unitId is invalid
+ * at the canonical projection boundary and cannot be interpreted implicitly.
+ */
 export function projectCanonicalUnit(unitId:string,registry:PersonnelRegistry,instances:EquipmentInstance[],assignments:InstanceCrewAssignment[],definitions:EquipmentDefinition[],consumables:CanonicalConsumableState[]):CanonicalUnitProjection{
+ for(const p of registry.personnel){
+  if(!Object.prototype.hasOwnProperty.call(p,'unitId')) throw new Error(`Personnel ownership must be explicit: ${p.id}`);
+  if(p.unitId!==null&&p.unitId!==undefined&&!p.unitId) throw new Error(`Personnel unitId cannot be empty: ${p.id}`);
+ }
+ for(const i of instances){
+  if(!Object.prototype.hasOwnProperty.call(i,'unitId')) throw new Error(`Equipment ownership must be explicit: ${i.instanceId}`);
+  if(i.unitId!==null&&i.unitId!==undefined&&!i.unitId) throw new Error(`Equipment instance unitId cannot be empty: ${i.instanceId}`);
+ }
  const unitPersonnel=registry.personnel.filter(p=>p.unitId===unitId);
  const unitInstances=instances.filter(i=>i.unitId===unitId);
  const consumable=consumables.find(c=>c.unitId===unitId);
