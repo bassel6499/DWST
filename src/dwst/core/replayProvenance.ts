@@ -76,6 +76,7 @@ export function createReplayProvenance(
 
 export function appendReplayCommands(
   provenance: ReplayProvenance,
+  rules: EraRuleset,
   turn: number,
   orders: Readonly<Record<string, Order | undefined>>,
 ): ReplayProvenance {
@@ -87,7 +88,10 @@ export function appendReplayCommands(
   }));
 
   return Object.freeze({
-    ...provenance,
+    modelVersion: provenance.modelVersion,
+    rulesetId: provenance.rulesetId,
+    rulesetContentHash: getRulesetContentHash(rules),
+    rng: null,
     commands: Object.freeze([...provenance.commands, ...additions]),
   });
 }
