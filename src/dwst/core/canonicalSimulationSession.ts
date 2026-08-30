@@ -1,7 +1,7 @@
 import type { CanonicalState } from './canonicalState';
 import { allocateCombatLosses, type CombatAllocationPolicy } from './canonicalCombatAllocation';
 import { commitCombatResourceChanges } from './canonicalCombatCommit';
-import { commitCanonicalConsumableState } from './canonicalConsumables';
+import { commitCanonicalConsumableState, commitCanonicalConsumableDelta } from './canonicalConsumables';
 import { reconcileScenarioResourceAggregates } from './canonicalScenarioProjection';
 import type { Order, ScenarioState, SimulationReport } from './types';
 import { getEraRuleset, type EraRuleset } from './eraRules';
@@ -70,45 +70,33 @@ export function startCanonicalSimulation(
 
 /**
  * Advance one live turn using canonical resource authority.
- * Resolution stays pure; losses are explicitly allocated and committed to
- * canonical records, while ammunition/fuel are committed as typed canonical
- * consumable records before the next state is projected.
+ * Resolution produces explicit typed resource deltas; canonical records are
+ * then updated from those deltas before the next projection.
  */
 export function advanceCanonicalSimulation(
   session: CanonicalSimulationSession,
   policy: CombatAllocationPolicy,
 ): CanonicalSimulationSessionStepResult {
   const working = cloneScenario(reconcileScenarioResourceAggregates(session.state, session.canonical));
-  const before = working.units;
   const report = resolveTurn(working, session.rules, session.baseline);
   let canonical = cloneCanonical(session.canonical);
 
-  for (const nextUnit of report.units) {
-    const previousUnit = before[nextUnit.id];
-    if (!previousUnit) throw new Error(`Simulation report contains unknown unit ${nextUnit.id}`);
-
-    const personnelLosses = previousUnit.personnel - nextUnit.personnel;
-    const equipmentLosses = previousUnit.equipment - nextUnit.equipment;
-    if (personnelLosses < 0 || equipmentLosses < 0) {
-      throw new Error(`Canonical resource reconciliation cannot commit resource increases for unit ${nextUnit.id}`);
+  for (const delta of report.resourceDeltas) {
+    if (delta.personnel > 0 || delta.equipment > 0) {
+      throw new Error(`Canonical resource reconciliation cannot commit resource increases for unit ${delta.unitId}`);
     }
+    const personnelLosses = -delta.personnel;
+    const equipmentLosses = -delta.equipment;
     if (personnelLosses > 0 || equipmentLosses > 0) {
-      const commit = allocateCombatLosses(canonical, nextUnit.id, {
+      const commit = allocateCombatLosses(canonical, delta.unitId, {
         personnel: personnelLosses,
         equipment: equipmentLosses,
       }, policy);
       canonical = commitCombatResourceChanges(canonical, commit);
     }
-
-    const previousConsumables = canonical.consumables.find((record) => record.unitId === nextUnit.id);
-    if (!previousConsumables) throw new Error(`Missing canonical consumable coverage for unit ${nextUnit.id}`);
     canonical = {
       ...canonical,
-      consumables: commitCanonicalConsumableState(canonical.consumables, {
-        unitId: nextUnit.id,
-        ammunition: nextUnit.ammunition,
-        fuel: nextUnit.fuel,
-      }),
+      consumables: commitCanonicalConsumableDelta(canonical.consumables, delta),
     };
   }
 
