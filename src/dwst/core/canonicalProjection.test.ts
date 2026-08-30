@@ -37,4 +37,11 @@ describe('projectCanonicalUnit',()=>{
  it('does not mutate canonical inputs',()=>{
   const before=JSON.stringify({registry,instances,assignments,consumables}); projectCanonicalUnit('u1',registry,instances,assignments,definitions,consumables); expect(JSON.stringify({registry,instances,assignments,consumables})).toBe(before);
  });
+ it('surfaces a missing equipment definition instead of silently under-counting readiness',()=>{
+  expect(()=>projectCanonicalUnit('u1',registry,instances,assignments,[],consumables)).toThrow('Missing equipment definition tank for unit u1');
+ });
+ it('surfaces a missing crew requirement instead of silently under-counting readiness',()=>{
+  const invalidDefinitions:EquipmentDefinition[]=[{id:'tank',name:'Tank',era:'WWII',equipmentType:'tank',crewRequirementId:'WWII:tank:missingCrew'}];
+  expect(()=>projectCanonicalUnit('u1',registry,instances,assignments,invalidDefinitions,consumables)).toThrow();
+ });
 });
