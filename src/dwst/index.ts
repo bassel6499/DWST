@@ -31,6 +31,8 @@ export {
   type CombatLaw,
 } from './core/eraRules';
 
+export { validateScenario } from './core/scenarioValidation';
+
 export {
   parseNaturalLanguageOrder,
   type ParsedOrder,
