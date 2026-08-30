@@ -4,7 +4,7 @@ import { commitCombatResourceChanges } from './canonicalCombatCommit';
 import { commitCanonicalConsumableDelta } from './canonicalConsumables';
 import { reconcileScenarioResourceAggregates } from './canonicalScenarioProjection';
 import type { Order, ScenarioState, SimulationReport } from './types';
-import { getEraRuleset, type EraRuleset } from './eraRules';
+import { getEraRuleset, validateEraRuleset, type EraRuleset } from './eraRules';
 import { applyTurn, resolveTurn } from './engine';
 import { captureSimulationBaseline, type SimulationBaseline } from './simulationBaseline';
 import { appendReplayCommands, createReplayProvenance, type ReplayProvenance } from './replayProvenance';
@@ -58,6 +58,10 @@ export function startCanonicalSimulation(
   rules: EraRuleset = getEraRuleset(state.era),
 ): CanonicalSimulationSession {
   if (!rules) throw new Error('No ruleset selected');
+  const capabilityErrors = validateEraRuleset(rules);
+  if (capabilityErrors.length > 0) {
+    throw new Error(`Era ${rules.id} is not runnable: ${capabilityErrors.join('; ')}`);
+  }
   const projectedState = reconcileScenarioResourceAggregates(state, canonical);
   return {
     state: cloneScenario(projectedState),
