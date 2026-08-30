@@ -1,1 +1,0 @@
-S23 legacy retirement marker. The obsolete aggregate resource architecture (CanonicalResourceLedger, EquipmentPool, CrewPool, and the migration scaffolding that exists only to preserve that model) is being retired in favor of CanonicalState instance-level authority. This marker is temporary and may be removed after CI verification.
