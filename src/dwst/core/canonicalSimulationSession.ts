@@ -5,6 +5,7 @@ import { commitCanonicalConsumableDelta } from './canonicalConsumables';
 import { reconcileScenarioResourceAggregates } from './canonicalScenarioProjection';
 import type { Order, ScenarioState, SimulationReport } from './types';
 import { getEraRuleset, validateEraRuleset, type EraRuleset } from './eraRules';
+import { validateScenario } from './scenarioValidation';
 import { applyTurn, resolveTurn } from './engine';
 import { captureSimulationBaseline, type SimulationBaseline } from './simulationBaseline';
 import { appendReplayCommands, createReplayProvenance, type ReplayProvenance } from './replayProvenance';
@@ -32,6 +33,7 @@ const cloneScenario = (state: ScenarioState): ScenarioState => ({
   }])),
   locations: state.locations?.map((location) => ({ ...location, position: { ...location.position } })),
   events: state.events.map((event) => ({ ...event, unitIds: [...event.unitIds] })),
+  sensors: state.sensors?.map((sensor) => ({ ...sensor })),
 });
 
 const cloneCanonical = (state: CanonicalState): CanonicalState => ({
@@ -57,6 +59,11 @@ export function startCanonicalSimulation(
   canonical: CanonicalState,
   rules: EraRuleset = getEraRuleset(state.era),
 ): CanonicalSimulationSession {
+  const scenarioErrors = validateScenario(state);
+  if (scenarioErrors.length > 0) {
+    throw new Error(`Scenario ${state.id || '<unknown>'} is not runnable: ${scenarioErrors.join('; ')}`);
+  }
+
   if (!rules) throw new Error('No ruleset selected');
   const capabilityErrors: string[] = [];
   if (!rules.implemented) capabilityErrors.push('ruleset is not implemented');
