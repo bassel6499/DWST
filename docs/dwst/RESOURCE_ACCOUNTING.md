@@ -1,24 +1,27 @@
 # Canonical Resource Accounting
 
-This document freezes the meaning of resource fields before legacy modules are migrated.
+This document describes the current canonical resource model and commit boundary.
+
+## Authority
+`CanonicalState` is authoritative for detailed personnel, equipment, crew assignments, equipment definitions, ammunition, and fuel. `ScenarioState` resource aggregates are projections used by the simulation engine and are reconciled from canonical records at the session boundary.
 
 ## Personnel
-Personnel status is mutually exclusive. `total` equals the sum of available, assigned, training, wounded, missing and killed. Killed personnel remain killed; they are never returned by a readiness or replacement calculation.
+Personnel records have mutually exclusive statuses. Unit personnel totals are projections over those records. Killed/missing/wounded personnel remain in their canonical statuses until an explicit, auditable transition changes them.
 
-## Specialist personnel
-A specialist pool represents personnel assigned to a specialty. `qualified` is a subset of that pool and `training` is the subset currently undergoing qualification. Experience classes (trained/experienced/veteran) are subsets of qualified personnel, never additional personnel.
+## Specialist personnel and crew
+Specialist qualification is represented by canonical personnel records and explicit crew assignments. Qualification and crew availability are constraints; they do not create additional manpower. Missing or invalid crew-definition data is a validation error, not an inferred replacement.
 
 ## Equipment
-Equipment state is mutually exclusive: total = operational + damaged + destroyed. Assigned equipment is a subset of operational equipment. Destroyed equipment cannot reappear without an explicit replacement/reconstitution event.
+Equipment instances are canonical records with operational, damaged, or destroyed status. Unit equipment totals are projections over those records. Destroyed equipment cannot reappear without an explicit replacement/reconstitution transition.
 
-## Crew coupling
-Each equipment type may declare a crew specialty and personnel-per-system requirement. Usable systems are the minimum of operational systems and the number supportable by qualified personnel. This is an availability constraint, not a combat-loss formula.
+## Consumables
+Ammunition and fuel are canonical consumable records keyed by unit. Resolution produces explicit typed deltas when consumables are consumed; the canonical session commits those deltas and then reprojects unit aggregates. Detailed sustainment/recovery semantics remain a downstream logistics concern and must not create a second resource authority.
 
-## Training
-Training is a state transition over elapsed simulation time. A training order creates/advances a training cohort; it does not instantly create a ready specialist. Experience quality cannot be manufactured by training a unit for one turn.
+## Combat and resolution separation
+Combat and movement resolution produce explicit effects/resource deltas. They do not directly mutate canonical resource records. The canonical session is the authoritative application boundary: resolve → explicit delta → canonical commit → projection.
 
-## Separation from combat
-These ledgers account for resources. Combat equations determine losses/effects and return proposed events. They must not directly mutate these ledgers. A single commit stage applies validated events.
+## Reconciliation invariant
+After each canonical turn, projected personnel, equipment, ammunition, and fuel values must reconcile exactly with the corresponding canonical records. Resource changes must never be reconstructed by subtracting projected before/after `UnitState` aggregates.
 
 ## Legacy compatibility
-The existing `crews.ts` and `equipment.ts` implementations remain untouched during this phase. Adapters/migration will be introduced only after the semantics are tested and mapped explicitly.
+Retired aggregate ledgers, equipment pools, and crew pools are not operational authorities. Compatibility adapters may expose legacy shapes where required, but they must not maintain competing mutable resource state.
