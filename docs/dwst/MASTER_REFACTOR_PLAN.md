@@ -166,9 +166,9 @@ No implicit casualty/equipment disposition guessing is permitted.
 
 **B-series scope rule:** B01-B26 below are downstream implementation/verification tasks. They do not own or re-implement the architectural findings P2-S20 through P2-S31. Where a B item touches the same subsystem, it must consume the S-series architectural decision and verify only its own stated acceptance criteria.
 
-B01 — Aggregate-vs-detailed reconciliation: validate remaining aggregate mutation/projection paths **after P2-S21/P2-S23/P2-S28 decisions are implemented**; do not duplicate their architectural unification work.
+B01 — Aggregate-vs-detailed reconciliation: **CLOSED / PASS.** Validated remaining aggregate mutation/projection paths after the P2-S21/P2-S23/P2-S28 architectural decisions; no conflicting authoritative aggregate mutation path was found. No code change required.
 
-B02 — State transition invariants: strengthen executable invariants around valid state transitions, without redefining session/resource architecture from P2-S20.
+B02 — State transition invariants: **CLOSED / PASS.** Executable transition/commit behavior and relevant regression coverage were inspected; no actual B02 invariant violation was found. No code change required.
 
 B03 — Direct combat/state mutation audit: ensure combat produces results and does not bypass the explicit application/commit boundary; do not absorb P2-S28's explicit resource-delta architecture.
 
