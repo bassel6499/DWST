@@ -40,7 +40,7 @@ const canonical = (): CanonicalState => ({
     ...Array.from({ length: 10 }, (_, i) => ({ instanceId: `e2-${i}`, definitionId: 'eq', unitId: 'u2', status: 'operational' as const })),
   ],
   crewAssignments: [],
-  equipmentDefinitions: [],
+  equipmentDefinitions: [{ id: 'eq', name: 'WWII tank', era: 'WWII', equipmentType: 'tank', crewRequirementId: 'WWII:tank:tankCrew' }],
   consumables: [
     { unitId: 'u1', ammunition: 1, fuel: 1 },
     { unitId: 'u2', ammunition: 1, fuel: 1 },
