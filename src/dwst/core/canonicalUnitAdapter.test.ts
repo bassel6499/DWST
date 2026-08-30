@@ -20,7 +20,7 @@ const canonicalState: CanonicalState = {
     { instanceId: 'e1', slot: 3, personnelId: 'p3', specialty: 'tankCrew' },
   ],
   equipmentDefinitions: [
-    { id: 'tank', name: 'Tank', era: 'Modern', equipmentType: 'tank', crewRequirementId: 'tankCrew' },
+    { id: 'tank', name: 'Tank', era: 'Modern', equipmentType: 'tank', crewRequirementId: 'Modern:tank:tankCrew' },
   ],
   consumables: [{ unitId: 'u1', ammunition: 0.75, fuel: 0.6 }],
 };
