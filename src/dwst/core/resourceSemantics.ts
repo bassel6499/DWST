@@ -1,7 +1,4 @@
-import type { EquipmentType } from './equipment';
-import type { CrewSpecialty } from './crews';
-
-/** Canonical meanings used by the refactor. These definitions deliberately avoid mutating legacy models. */
+/** Canonical meanings used by the refactor. These definitions do not depend on aggregate legacy models. */
 export interface ResourceAccountingRules {
   personnelStatusIsExclusive:true;
   specialistQualifiedIsSubsetOfSpecialistPersonnel:true;
@@ -25,12 +22,12 @@ export const RESOURCE_ACCOUNTING_RULES:ResourceAccountingRules={
 };
 
 export interface EquipmentCrewRequirement {
-  equipmentType:EquipmentType;
-  crewSpecialty:CrewSpecialty;
+  equipmentType:string;
+  crewSpecialty:string;
   personnelPerSystem:number;
 }
 
-export function requiredCrewForSystems(requirement:EquipmentCrewRequirement, systems:number):number{
+export function requiredCrewForSystems(requirement:EquipmentCrewRequirement,systems:number):number{
   if(!Number.isInteger(systems)||systems<0) throw new Error('systems must be a non-negative integer');
   if(!Number.isInteger(requirement.personnelPerSystem)||requirement.personnelPerSystem<=0) throw new Error('personnelPerSystem must be a positive integer');
   return systems*requirement.personnelPerSystem;
