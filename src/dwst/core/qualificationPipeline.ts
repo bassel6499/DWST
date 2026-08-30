@@ -1,9 +1,9 @@
-import type { CrewExperience } from './canonicalLedger';
-import type { CrewSpecialty } from './crews';
+import type { CrewExperience } from './personnelRegistry';
+import type { CrewRequirement } from './crewRequirements';
 import type { PersonnelRecord, PersonnelRegistry } from './personnelRegistry';
 
-export interface QualificationTrainingOrder { personnelId:string; specialty:CrewSpecialty; requiredHours:number; elapsedHours:number; }
-export interface QualificationResult { personnelId:string; specialty:CrewSpecialty; completed:boolean; remainingHours:number; }
+export interface QualificationTrainingOrder { personnelId:string; specialty:string; requiredHours:number; elapsedHours:number; }
+export interface QualificationResult { personnelId:string; specialty:string; completed:boolean; remainingHours:number; }
 
 export function advanceQualification(order:QualificationTrainingOrder,hours:number):QualificationResult {
  if(!Number.isFinite(hours)||hours<0) throw new Error('Training advance must be non-negative');
@@ -23,3 +23,7 @@ export function canQualifyPersonnel(person:PersonnelRecord,order:QualificationTr
 export function initialCrewExperience():CrewExperience{return 'trained';}
 export function qualificationReadinessFactor(experience:CrewExperience):number{return experience==='veteran'?1:experience==='experienced'?.9:.75;}
 export function registryHasPersonnel(registry:PersonnelRegistry,personnelId:string):boolean{return registry.personnel.some(p=>p.id===personnelId);}
+export function qualificationFor(definition: { equipmentType:string; era:string }): CrewRequirement|undefined {
+ const { getCrewRequirement } = require('./crewRequirements') as typeof import('./crewRequirements');
+ return getCrewRequirement(definition.equipmentType,definition.era);
+}
