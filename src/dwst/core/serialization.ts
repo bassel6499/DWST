@@ -23,7 +23,7 @@ const assertFiniteNumbers = (value: unknown, path = '$'): void => {
     return;
   }
   if (value && typeof value === 'object') {
-    for (const [key, child] of Object.entries(value)) assertFiniteNumbers(child, `${path}.${key}`);
+    for (const [key, child] of Object.entries(value)) assertFiniteNumbers(child, `${path}.${key}`));
   }
 };
 
@@ -51,12 +51,12 @@ const decode = <T>(text: string, expectedKind: SerializationKind): T => {
 
 /** Round-trip the authoritative scenario state, including events, unit history, sensors and locations. */
 export const serializeScenarioState = (state: ScenarioState): string => encode('scenario-state', state);
-export const deserializeScenarioState = (text: string): ScenarioState => decode('scenario-state', text);
+export const deserializeScenarioState = (text: string): ScenarioState => decode<ScenarioState>(text, 'scenario-state');
 
 /** Round-trip canonical personnel/equipment/crew/definition/consumable state. */
 export const serializeCanonicalState = (state: CanonicalState): string => encode('canonical-state', state);
-export const deserializeCanonicalState = (text: string): CanonicalState => decode('canonical-state', text);
+export const deserializeCanonicalState = (text: string): CanonicalState => decode<CanonicalState>(text, 'canonical-state');
 
 /** Round-trip Core-owned replay provenance, including command journal and ruleset fingerprint. */
 export const serializeReplayProvenance = (provenance: ReplayProvenance): string => encode('replay-provenance', provenance);
-export const deserializeReplayProvenance = (text: string): ReplayProvenance => decode('replay-provenance', text);
+export const deserializeReplayProvenance = (text: string): ReplayProvenance => decode<ReplayProvenance>(text, 'replay-provenance');
