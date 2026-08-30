@@ -45,21 +45,11 @@ export function commitCombatResourceChanges(
     equipmentIds.add(loss.instanceId);
   }
 
-  const personnel = state.personnel.personnel.map((record) => {
-    const allocation = commit.personnel.find((loss) => loss.personnelId === record.id);
-    return allocation ? { ...record, status: allocation.disposition } : { ...record, experience: { ...record.experience }, qualifications: [...record.qualifications] };
-  });
-
   for (const loss of commit.personnel) {
     if (!state.personnel.personnel.some((record) => record.id === loss.personnelId)) {
       throw new Error(`Unknown personnel loss allocation: ${loss.personnelId}`);
     }
   }
-
-  const equipment = state.equipment.map((instance) => {
-    const allocation = commit.equipment.find((loss) => loss.instanceId === instance.instanceId);
-    return allocation ? { ...instance, status: allocation.disposition } : { ...instance };
-  });
 
   for (const loss of commit.equipment) {
     if (!state.equipment.some((instance) => instance.instanceId === loss.instanceId)) {
@@ -67,11 +57,32 @@ export function commitCombatResourceChanges(
     }
   }
 
+  const personnel = state.personnel.personnel.map((record) => {
+    const allocation = commit.personnel.find((loss) => loss.personnelId === record.id);
+    return allocation ? { ...record, status: allocation.disposition } : { ...record, experience: { ...record.experience }, qualifications: [...record.qualifications] };
+  });
+
+  const equipment = state.equipment.map((instance) => {
+    const allocation = commit.equipment.find((loss) => loss.instanceId === instance.instanceId);
+    return allocation ? { ...instance, status: allocation.disposition } : { ...instance };
+  });
+
+  const lostPersonnelIds = new Set(commit.personnel.map((loss) => loss.personnelId));
+  const nonOperationalEquipmentIds = new Set(
+    equipment
+      .filter((instance) => instance.status !== 'operational')
+      .map((instance) => instance.instanceId),
+  );
+  const crewAssignments = state.crewAssignments
+    .filter((assignment) => !lostPersonnelIds.has(assignment.personnelId))
+    .filter((assignment) => !nonOperationalEquipmentIds.has(assignment.instanceId))
+    .map((assignment) => ({ ...assignment }));
+
   return {
     ...state,
     personnel: { personnel },
     equipment,
-    crewAssignments: state.crewAssignments.map((assignment) => ({ ...assignment })),
+    crewAssignments,
     equipmentDefinitions: state.equipmentDefinitions.map((definition) => ({ ...definition })),
   };
 }
