@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import DwstCommandPanel from './DwstCommandPanel.vue';
-import { advanceCanonicalSimulation, startCanonicalSimulation } from '@/dwst/core/canonicalSimulationSession';
-import type { CanonicalState } from '@/dwst/core/canonicalState';
-import type { CombatAllocationPolicy } from '@/dwst/core/canonicalCombatAllocation';
-import { resolveOrderDestination } from '@/dwst/core/scenarioLocations';
+import {
+  advanceCanonicalSimulation,
+  startCanonicalSimulation,
+  resolveOrderDestination,
+  type CanonicalState,
+  type CombatAllocationPolicy,
+  type Order,
+  type UnitState,
+} from '@/dwst';
 import { ardennes1944 } from '@/dwst/scenarios/ardennes1944';
-import type { Order, UnitState } from '@/dwst/core/types';
 
 const policy: CombatAllocationPolicy = {
   personnelDisposition: 'killed',
