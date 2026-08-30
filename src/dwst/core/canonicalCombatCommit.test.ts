@@ -12,7 +12,10 @@ const state: CanonicalState = {
   equipment: [
     { instanceId: 'e1', definitionId: 'rifle', unitId: 'u1', status: 'operational' },
   ],
-  crewAssignments: [],
+  crewAssignments: [
+    { instanceId: 'e1', slot: 1, personnelId: 'p1', specialty: 'rifle' },
+    { instanceId: 'e1', slot: 2, personnelId: 'p2', specialty: 'rifle' },
+  ],
   equipmentDefinitions: [],
   consumables: [{ unitId: 'u1', ammunition: 1, fuel: 1 }],
 };
@@ -29,8 +32,21 @@ describe('canonical combat commit', () => {
       ['p2', 'wounded'],
     ]);
     expect(next.equipment[0].status).toBe('damaged');
+    expect(next.crewAssignments).toEqual([]);
     expect(state.personnel.personnel[1].status).toBe('assigned');
     expect(state.equipment[0].status).toBe('operational');
+    expect(state.crewAssignments).toHaveLength(2);
+  });
+
+  it('removes only assignments affected by personnel or equipment losses', () => {
+    const next = commitCombatResourceChanges(state, {
+      personnel: [{ personnelId: 'p2', disposition: 'killed' }],
+      equipment: [],
+    });
+
+    expect(next.crewAssignments).toEqual([
+      { instanceId: 'e1', slot: 1, personnelId: 'p1', specialty: 'rifle' },
+    ]);
   });
 
   it('rejects duplicate and unknown canonical record allocations', () => {
