@@ -81,10 +81,13 @@ describe('event and unit-history reconciliation', () => {
 
     assert.equal(attacker.history.at(-1)?.type, 'combat');
     assert.equal(defender.history.at(-1)?.type, 'combat');
-    assert.equal(attacker.history.at(-1)?.personnelLosses, -attackerDelta.personnel);
-    assert.equal(defender.history.at(-1)?.personnelLosses, -defenderDelta.personnel);
-    assert.equal(attacker.history.at(-1)?.equipmentLosses, -attackerDelta.equipment);
-    assert.equal(defender.history.at(-1)?.equipmentLosses, -defenderDelta.equipment);
+
+    const attackerHistory = attacker.history.at(-1)!;
+    const defenderHistory = defender.history.at(-1)!;
+    assert.equal(attackerHistory.personnelLosses, attackerDelta.personnel < 0 ? -attackerDelta.personnel : undefined);
+    assert.equal(defenderHistory.personnelLosses, defenderDelta.personnel < 0 ? -defenderDelta.personnel : undefined);
+    assert.equal(attackerHistory.equipmentLosses, attackerDelta.equipment < 0 ? -attackerDelta.equipment : undefined);
+    assert.equal(defenderHistory.equipmentLosses, defenderDelta.equipment < 0 ? -defenderDelta.equipment : undefined);
   });
 
   it('commits the reconciled unit histories together with the scenario events', () => {
