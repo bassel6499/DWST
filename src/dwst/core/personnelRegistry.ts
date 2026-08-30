@@ -1,8 +1,9 @@
-import type { CrewExperience, PersonnelStatus } from './canonicalLedger';
+export type PersonnelStatus='available'|'training'|'assigned'|'wounded'|'killed'|'missing';
+export type CrewExperience='veteran'|'experienced'|'trained';
 
 export interface PersonnelRecord {
   id:string;
-  /** Canonical organizational ownership. Omit for legacy aggregate-only records. */
+  /** Canonical organizational ownership. */
   unitId?:string;
   status:PersonnelStatus;
   qualifications:string[];
