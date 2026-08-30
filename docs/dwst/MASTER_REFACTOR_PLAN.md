@@ -170,13 +170,13 @@ B01 — Aggregate-vs-detailed reconciliation: **CLOSED / PASS.** Validated remai
 
 B02 — State transition invariants: **CLOSED / PASS.** Executable transition/commit behavior and relevant regression coverage were inspected; no actual B02 invariant violation was found. No code change required.
 
-B03 — Direct combat/state mutation audit: ensure combat produces results and does not bypass the explicit application/commit boundary; do not absorb P2-S28's explicit resource-delta architecture.
+B03 — Direct combat/state mutation audit: **CLOSED / PASS.** Direct inspection of combat resolution, combat-result application, and the canonical commit boundary found no combat/state mutation bypass. Combat produces results and explicit resource deltas; state/resource mutation remains at the explicit application/commit boundary. No code change required.
 
-B04 — Deterministic RNG: make stochastic behavior reproducible from explicit seed/state; consume P2-S25's provenance decision rather than redefining replay provenance.
+B04 — Deterministic RNG: **CLOSED / PASS.** The implemented combat path is deterministic and currently contains no stochastic behavior requiring an RNG seed/state. No RNG was introduced merely to satisfy the task wording; P2-S25 provenance already records the current deterministic engine as `rng: null`. No code change required.
 
-B05 — Accounting/replay regression: prove detailed accounting and replay determinism over representative turns **after P2-S25 is resolved**; do not duplicate command-journal/model-version architecture.
+B05 — Accounting/replay regression: **CLOSED / PASS.** Canonical-session regression coverage verifies detailed resource/accounting reconciliation and provenance/journal continuity over turns; direct inspection found no accounting or replay defect requiring a change. No code change required.
 
-B06 — Orders/command validation: enforce valid orders and command semantics at the correct boundary; command history persistence remains P2-S25 scope.
+B06 — Orders/command validation: **CLOSED / PASS.** Direct inspection of the actual order-execution boundary confirmed formation validation, typed order categories, command-quality/friction handling, structured execution results, and no inappropriate OOB mutation. Optional `deadline`/`dependencies` fields were not treated as a defect without evidence that B06 requires their enforcement in this boundary. No code change required.
 
 B07 — Turn-entry and map invariants: retain executable checks for turn entry, geographic state, and projection consistency; do not reopen closed S1-S7 architecture.
 
