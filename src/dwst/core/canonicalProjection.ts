@@ -35,8 +35,9 @@ export function projectCanonicalUnit(unitId:string,registry:PersonnelRegistry,in
  let crewRequired=0,crewReady=0,equipmentReady=0;
  for(const instance of unitInstances){
   if(instance.status!=='operational') continue;
-  const definition=definitionMap.get(instance.definitionId);if(!definition)continue;
-  let requirement;try{requirement=resolveCrewRequirement(definition);}catch{continue;}
+  const definition=definitionMap.get(instance.definitionId);
+  if(!definition) throw new Error(`Missing equipment definition ${instance.definitionId} for unit ${unitId}`);
+  const requirement=resolveCrewRequirement(definition);
   crewRequired+=requirement.requiredQualifiedCrew;
   const assigned=assignedByInstance.get(instance.instanceId)??[];
   const ready=assigned.filter(a=>{const p=registry.personnel.find(x=>x.id===a.personnelId);return p?.status==='assigned'&&p.qualifications.includes(requirement.specialty);});
