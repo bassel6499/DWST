@@ -26,12 +26,8 @@ export function applyPersonnelOperations(input:PersonnelRegistry, operations:Per
  */
 export function assertPersonnelLedgerMatchesRegistry(
   registry:PersonnelRegistry,
-  expected:Record<PersonnelStatus,number>,
-):string[] {
+  counts:Record<PersonnelStatus,number>,
+):string[]{
   const actual=personnelStatusCounts(registry);
-  const errors:string[]=[];
-  for(const status of Object.keys(actual) as PersonnelStatus[]) {
-    if(actual[status]!==expected[status]) errors.push(`Personnel ${status} count mismatch: expected ${expected[status]}, got ${actual[status]}`);
-  }
-  return errors;
+  return (Object.keys(actual) as PersonnelStatus[]).filter(s=>actual[s]!==counts[s]).map(s=>`Personnel status mismatch for ${s}: registry=${actual[s]}, ledger=${counts[s]}`);
 }
