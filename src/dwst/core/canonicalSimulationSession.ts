@@ -3,16 +3,18 @@ import { allocateCombatLosses, type CombatAllocationPolicy } from './canonicalCo
 import { commitCombatResourceChanges } from './canonicalCombatCommit';
 import { commitCanonicalConsumableState } from './canonicalConsumables';
 import { reconcileScenarioResourceAggregates } from './canonicalScenarioProjection';
-import type { ScenarioState, SimulationReport } from './types';
+import type { Order, ScenarioState, SimulationReport } from './types';
 import { getEraRuleset, type EraRuleset } from './eraRules';
 import { applyTurn, resolveTurn } from './engine';
 import { captureSimulationBaseline, type SimulationBaseline } from './simulationBaseline';
+import { appendReplayCommands, createReplayProvenance, type ReplayProvenance } from './replayProvenance';
 
 export interface CanonicalSimulationSession {
   readonly state: ScenarioState;
   readonly canonical: CanonicalState;
   readonly baseline: SimulationBaseline;
   readonly rules: EraRuleset;
+  readonly provenance: ReplayProvenance;
 }
 
 export interface CanonicalSimulationSessionStepResult {
@@ -46,6 +48,9 @@ const cloneCanonical = (state: CanonicalState): CanonicalState => ({
   consumables: state.consumables.map((record) => ({ ...record })),
 });
 
+const ordersForUnits = (state: ScenarioState): Readonly<Record<string, Order | undefined>> =>
+  Object.fromEntries(Object.entries(state.units).map(([id, unit]) => [id, unit.order]));
+
 /** Start the canonical simulation path with explicit authoritative resources. */
 export function startCanonicalSimulation(
   state: ScenarioState,
@@ -59,6 +64,7 @@ export function startCanonicalSimulation(
     canonical: cloneCanonical(canonical),
     baseline: captureSimulationBaseline(projectedState),
     rules,
+    provenance: createReplayProvenance(rules),
   };
 }
 
@@ -107,8 +113,9 @@ export function advanceCanonicalSimulation(
   }
 
   const nextState = reconcileScenarioResourceAggregates(applyTurn(working, report), canonical);
+  const provenance = appendReplayCommands(session.provenance, session.rules, report.turn, ordersForUnits(working));
   return {
-    session: { state: nextState, canonical, baseline: session.baseline, rules: session.rules },
+    session: { state: nextState, canonical, baseline: session.baseline, rules: session.rules, provenance },
     report,
   };
 }
