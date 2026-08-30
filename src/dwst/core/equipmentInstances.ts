@@ -3,8 +3,8 @@ import type { EquipmentDefinition } from './equipmentCatalog';
 export interface EquipmentInstance {
   instanceId:string;
   definitionId:string;
-  /** Canonical ownership boundary: the unit that owns this physical system. */
-  unitId?:string;
+  /** Canonical ownership boundary. null explicitly means non-unit/unassigned equipment. */
+  unitId:string|null;
   serial?:string;
   status:'operational'|'damaged'|'destroyed'|'missing';
 }
@@ -15,7 +15,7 @@ export function validateEquipmentInstances(instances:EquipmentInstance[],definit
   if(!i.instanceId) errors.push('Equipment instance requires instanceId');
   if(ids.has(i.instanceId)) errors.push(`Duplicate equipment instance ID: ${i.instanceId}`); ids.add(i.instanceId);
   if(!defs.has(i.definitionId)) errors.push(`Unknown equipment definition: ${i.definitionId}`);
-  if(i.unitId!==undefined&&!i.unitId) errors.push(`Equipment instance unitId cannot be empty: ${i.instanceId}`);
+  if(i.unitId!==null&&!i.unitId) errors.push(`Equipment instance unitId cannot be empty: ${i.instanceId}`);
   if(!['operational','damaged','destroyed','missing'].includes(i.status)) errors.push(`Invalid equipment status: ${i.instanceId}`);
  }
  return errors;
