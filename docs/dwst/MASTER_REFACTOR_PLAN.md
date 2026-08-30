@@ -196,7 +196,7 @@ B14 — Scenario validation: **CLOSED / PASS.** Direct inspection verified that 
 
 B15 — Serialization/deserialization: **CLOSED / PASS.** Direct inspection verified the versioned serialization/deserialization boundary for ScenarioState, CanonicalState, and ReplayProvenance, including explicit format/kind/version checks and rejection of non-finite JSON values. Regression coverage verifies scenario/canonical/provenance round-trips, malformed/incompatible input rejection, and non-finite-number rejection. Validation CI run 33331635855 is green (type-check and full unit test suite); earlier CI 33331626936 failed against the pre-fix B15 commit and was superseded by the corrected commit. No further B15 code change is required.
 
-B16 — CLI/API boundary: keep external interfaces thin and prevent adapter logic from becoming simulation authority **after P2-S26 establishes the public DWST API boundary**; B16 must validate adapter behavior, not redefine the API architecture.
+B16 — CLI/API boundary: **CLOSED / PASS.** Direct inspection verified that external consumers enter through the stable public DWST API established by P2-S26, while canonical simulation/session mutation remains owned by the Core. No separate CLI/API simulation authority, deep-Core consumer bypass, competing session/state pipeline, or adapter-side duplication of Core rules was found. The public-boundary and canonical-session paths were inspected directly, and no B16 code change was required. B16 was closed as a verification-only task; no new CI run was required because its acceptance criteria were satisfied by direct repository inspection and the existing public-boundary validation evidence.
 
 B17 — Visualization projection: preserve ORBAT Mapper as a consumer/projection layer only.
 
