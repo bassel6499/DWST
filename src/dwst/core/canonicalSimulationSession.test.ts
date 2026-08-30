@@ -4,6 +4,8 @@ import type { CanonicalState } from './canonicalState';
 import type { ScenarioState, UnitState } from './types';
 import { advanceCanonicalSimulation, startCanonicalSimulation } from './canonicalSimulationSession';
 import type { CombatAllocationPolicy } from './canonicalCombatAllocation';
+import { getRulesetContentHash } from './replayProvenance';
+import { getEraRuleset } from './eraRules';
 
 const policy: CombatAllocationPolicy = {
   personnelDisposition: 'killed',
@@ -56,7 +58,33 @@ describe('canonical simulation session', () => {
     assert.equal(session.state.units.u1.position.lat, 0);
     assert.equal(session.canonical.personnel.personnel.length, 20);
     assert.equal(session.canonical.consumables.length, 2);
+    assert.equal(session.provenance.rulesetId, 'ww2');
+    assert.equal(session.provenance.rng, null);
+    assert.equal(session.provenance.rulesetContentHash, getRulesetContentHash(getEraRuleset('ww2')));
+    assert.equal(session.provenance.commands.length, 0);
     assert.notStrictEqual(session.state, input);
+  });
+
+  it('records an ordered command journal without changing turn resolution', () => {
+    const session = startCanonicalSimulation(scenario(), canonical());
+    const result = advanceCanonicalSimulation(session, policy);
+    assert.equal(result.session.provenance.commands.length, 2);
+    assert.deepEqual(result.session.provenance.commands.map((command) => command.sequence), [0, 1]);
+    assert.deepEqual(result.session.provenance.commands.map((command) => command.unitId), ['u1', 'u2']);
+    assert.ok(result.session.provenance.commands.every((command) => command.turn === result.report.turn));
+    assert.equal(result.session.provenance.commands[0].order?.type, 'attack');
+  });
+
+  it('preserves provenance identity across turns and journal ordering', () => {
+    const session = startCanonicalSimulation(scenario(), canonical());
+    const first = advanceCanonicalSimulation(session, policy).session;
+    const second = advanceCanonicalSimulation(first, policy).session;
+    assert.equal(first.provenance.rulesetContentHash, second.provenance.rulesetContentHash);
+    assert.equal(first.provenance.modelVersion, second.provenance.modelVersion);
+    assert.equal(first.provenance.commands.length, 2);
+    assert.equal(second.provenance.commands.length, 4);
+    assert.deepEqual(first.provenance.commands.map((command) => command.sequence), [0, 1]);
+    assert.deepEqual(second.provenance.commands.map((command) => command.sequence), [0, 1, 2, 3]);
   });
 
   it('uses canonical records as the post-turn resource authority', () => {
