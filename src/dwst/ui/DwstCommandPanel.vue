@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { Order, UnitState } from '@/dwst/core/types';
-import { parseNaturalLanguageOrder } from '@/dwst/core/orderProcessor';
+import type { Order, UnitState } from '@/dwst';
+import { parseNaturalLanguageOrder } from '@/dwst';
 
 const props = defineProps<{ units: UnitState[]; turnHours: number }>();
 const emit = defineEmits<{
