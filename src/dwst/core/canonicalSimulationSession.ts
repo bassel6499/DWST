@@ -1,7 +1,7 @@
 import type { CanonicalState } from './canonicalState';
 import { allocateCombatLosses, type CombatAllocationPolicy } from './canonicalCombatAllocation';
 import { commitCombatResourceChanges } from './canonicalCombatCommit';
-import { commitCanonicalConsumableState, commitCanonicalConsumableDelta } from './canonicalConsumables';
+import { commitCanonicalConsumableDelta } from './canonicalConsumables';
 import { reconcileScenarioResourceAggregates } from './canonicalScenarioProjection';
 import type { Order, ScenarioState, SimulationReport } from './types';
 import { getEraRuleset, type EraRuleset } from './eraRules';
