@@ -7,7 +7,7 @@ import type { InstanceCrewAssignment } from './instanceCrewAssignments';
 export interface EquipmentReadinessSummary { definitionId:string; operational:number; crewReady:number; combatReady:number; uncrewed:number; }
 
 /** Pure projection. Each personnel identity can contribute to at most one equipment instance. */
-export function projectEquipmentPoolReadiness(definition:EquipmentDefinition,instances:EquipmentInstance[],assignments:InstanceCrewAssignment[],registry:PersonnelRegistry):EquipmentReadinessSummary {
+export function projectEquipmentReadiness(definition:EquipmentDefinition,instances:EquipmentInstance[],assignments:InstanceCrewAssignment[],registry:PersonnelRegistry):EquipmentReadinessSummary {
  const requirement=resolveCrewRequirement(definition);
  const relevant=instances.filter(i=>i.definitionId===definition.id);
  const operational=relevant.filter(i=>i.status==='operational');
