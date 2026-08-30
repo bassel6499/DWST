@@ -70,7 +70,7 @@ describe('canonical simulation session', () => {
     input.era = 'ancient';
     assert.throws(
       () => startCanonicalSimulation(input, canonical()),
-      /Era ancient is not runnable: implemented era ruleset requires resolveCombat/,
+      /Era ancient is not runnable: ruleset is not implemented; required combat implementation is missing/,
     );
   });
 
