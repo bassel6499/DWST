@@ -63,6 +63,16 @@ export {
 } from './core/replayProvenance';
 
 export {
+  DWST_SERIALIZATION_VERSION,
+  serializeScenarioState,
+  deserializeScenarioState,
+  serializeCanonicalState,
+  deserializeCanonicalState,
+  serializeReplayProvenance,
+  deserializeReplayProvenance,
+} from './core/serialization';
+
+export {
   type EraId,
   type Scale,
   type Side,
