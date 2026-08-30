@@ -29,7 +29,7 @@ export function resolveEngagements(state: ScenarioState): Engagement[] {
     throw new Error(`Era ${state.era} does not have a runnable combat implementation`);
   }
 
-  const contacts = detectContacts(state, [], era.detection);
+  const contacts = detectContacts(state, state.sensors ?? [], era.detection);
   const engagements: Engagement[] = [];
   const seen = new Set<string>();
 
