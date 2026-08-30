@@ -65,6 +65,15 @@ describe('canonical simulation session', () => {
     assert.notStrictEqual(session.state, input);
   });
 
+  it('rejects an unimplemented era before simulation state is projected', () => {
+    const input = scenario();
+    input.era = 'ancient';
+    assert.throws(
+      () => startCanonicalSimulation(input, canonical()),
+      /Era ancient is not runnable: implemented era ruleset requires resolveCombat/,
+    );
+  });
+
   it('records an ordered command journal without changing turn resolution', () => {
     const session = startCanonicalSimulation(scenario(), canonical());
     const result = advanceCanonicalSimulation(session, policy);
