@@ -23,7 +23,7 @@ const assertFiniteNumbers = (value: unknown, path = '$'): void => {
     return;
   }
   if (value && typeof value === 'object') {
-    for (const [key, child] of Object.entries(value)) assertFiniteNumbers(child, `${path}.${key}`));
+    for (const [key, child] of Object.entries(value)) assertFiniteNumbers(child, `${path}.${key}`);
   }
 };
 
