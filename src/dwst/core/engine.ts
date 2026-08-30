@@ -1,4 +1,4 @@
-import type { Order, ScenarioState, SimulationEvent, SimulationReport, UnitState } from './types';
+import type { Order, ScenarioState, SimulationEvent, SimulationReport, UnitState, ResourceDelta } from './types';
 import { DEFAULT_ENGINE, getEraRuleset, type EngineCoefficients, type EraRuleset } from './eraRules';
 import { assessUnit } from './unitAssessment';
 import type { SimulationBaseline } from './simulationBaseline';
@@ -81,7 +81,18 @@ export function resolveTurn(state: ScenarioState, rules: EraRuleset = getEraRule
   }
 
   const finalUnits = Object.values(resolvedState.units);
-  return { turn, elapsedHours: state.elapsedHours + hours, events, units: finalUnits };
+  const resourceDeltas: ResourceDelta[] = finalUnits.map((nextUnit) => {
+    const previousUnit = state.units[nextUnit.id];
+    if (!previousUnit) throw new Error(`Simulation report contains unknown unit ${nextUnit.id}`);
+    return {
+      unitId: nextUnit.id,
+      personnel: nextUnit.personnel - previousUnit.personnel,
+      equipment: nextUnit.equipment - previousUnit.equipment,
+      ammunition: nextUnit.ammunition - previousUnit.ammunition,
+      fuel: nextUnit.fuel - previousUnit.fuel,
+    };
+  });
+  return { turn, elapsedHours: state.elapsedHours + hours, events, units: finalUnits, resourceDeltas };
 }
 
 /** Explicit state application for callers that want to advance a live scenario. */
