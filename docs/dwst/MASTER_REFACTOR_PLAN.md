@@ -178,13 +178,13 @@ B05 — Accounting/replay regression: **CLOSED / PASS.** Canonical-session regre
 
 B06 — Orders/command validation: **CLOSED / PASS.** Direct inspection of the actual order-execution boundary confirmed formation validation, typed order categories, command-quality/friction handling, structured execution results, and no inappropriate OOB mutation. Optional `deadline`/`dependencies` fields were not treated as a defect without evidence that B06 requires their enforcement in this boundary. No code change required.
 
-B07 — Turn-entry and map invariants: retain executable checks for turn entry, geographic state, and projection consistency; do not reopen closed S1-S7 architecture.
+B07 — Turn-entry and map invariants: **CLOSED / PASS.** Direct inspection verified the executable turn-entry, geographic-state, and projection-consistency invariants; no actual B07 defect was found and no code change was required. Closed without reopening S1-S7.
 
-B08 — One authoritative turn-state commit boundary: consolidate/verify the final live state mutation boundary **after P2-S20/P2-S28 architectural decisions**; do not duplicate their session or resource-ledger unification work.
+B08 — One authoritative turn-state commit boundary: **CLOSED / PASS.** Direct inspection verified the final live state mutation/commit boundary after P2-S20/P2-S28; canonical session/resource commit remains authoritative and no competing live turn-state commit path requiring a B08 fix was found. No code change required.
 
-B09 — Detection/sensor integration: ensure actual sensor inputs and policies reach detection rather than silently defaulting to unaided detection.
+B09 — Detection/sensor integration: **CLOSED / PASS.** Direct inspection found the detector consuming the era detection policy and supplied scenario sensor inputs through the operational combat path; the B09 sensor capability integration fix was implemented and directly verified by validation CI run 33318584855 (type-check and unit tests green). No remaining B09 defect was found.
 
-B10 — Combat ruleset isolation and era ownership: maintain separation between core orchestration and era-specific combat behavior **after P2-S24/P2-S29 ruleset architecture is settled**; do not duplicate mutable-ruleset or capability-entry fixes.
+B10 — Combat ruleset isolation and era ownership: **CLOSED / PASS.** Direct inspection verified that Core combat orchestration selects the era ruleset while era-specific combat behavior remains supplied by the era package; the inspected WW2 resolver is not duplicated in generic combat orchestration. No B10 violation or unnecessary architectural cleanup was found. No code change required.
 
 B11 — Logistics/sustainment semantics: verify resource consumption and recovery rules are explicit and deterministic **using the canonical resource authority established by P2-S21/P2-S23/P2-S28**, including actual ammunition consumption/recovery behavior as a downstream engine/ruleset concern; do not recreate the canonical resource-authority architecture here.
 
