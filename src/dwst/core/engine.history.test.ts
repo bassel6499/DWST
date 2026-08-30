@@ -64,7 +64,7 @@ describe('event and unit-history reconciliation', () => {
 
   it('records combat history for both participants and reconciles losses', () => {
     const input = scenario({
-      attacker: unit('attacker', 'allied', { type: 'attack', targetUnitId: 'defender' }),
+      attacker: unit('attacker', 'allied', { type: 'attack' }),
       defender: unit('defender', 'enemy'),
     });
 
