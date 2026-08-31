@@ -198,7 +198,7 @@ B15 — Serialization/deserialization: **CLOSED / PASS.** Direct inspection veri
 
 B16 — CLI/API boundary: **CLOSED / PASS.** Direct inspection verified that external consumers enter through the stable public DWST API established by P2-S26, while canonical simulation/session mutation remains owned by the Core. No separate CLI/API simulation authority, deep-Core consumer bypass, competing session/state pipeline, or adapter-side duplication of Core rules was found. The public-boundary and canonical-session paths were inspected directly, and no B16 code change was required. B16 was closed as a verification-only task; no new CI run was required because its acceptance criteria were satisfied by direct repository inspection and the existing public-boundary validation evidence.
 
-B17 — Visualization projection: preserve ORBAT Mapper as a consumer/projection layer only.
+B17 — Visualization projection: **CLOSED / PASS.** Direct inspection verified that ORBAT Mapper remains a consumer/projection layer over canonical scenario state and export configuration; it does not own competing simulation state, turn resolution, resource accounting, movement/detection/combat authority, or a parallel simulation session. The inspected ORBAT Mapper settings/export boundary reads canonical scenario state and writes only export-form data. No B17 code change was required; closed as a verification-only task.
 
 B18 — Standalone reporting: DWST must support operation without a graphical map by producing deterministic written simulation reports suitable for a chat-like interaction, using the same Core session as other consumers.
 
