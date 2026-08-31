@@ -8,6 +8,7 @@ import { unitEventsFromSimulationEvent } from './unitHistory';
 import { geographicDistanceMeters, interpolateGeographicPosition } from './geographicMovement';
 
 const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
+const byUnitId = (a: UnitState, b: UnitState) => a.id.localeCompare(b.id);
 
 /** Deterministic engine orchestration. Historical behavior belongs in rulesets. */
 export function effectiveReadiness(unit: UnitState, coefficients: EngineCoefficients = DEFAULT_ENGINE): number {
@@ -72,7 +73,7 @@ export function resolveTurn(state: ScenarioState, rules: EraRuleset = getEraRule
   };
   const hours = state.turnHours;
   const turn = Math.floor(state.elapsedHours / Math.max(hours, 1)) + 1;
-  const units = Object.values(state.units).map((unit) => {
+  const units = Object.values(state.units).sort(byUnitId).map((unit) => {
     const next = { ...unit, position: { ...unit.position }, history: [...unit.history] };
     const movement = resolveMovement(next, hours, rules.engine);
     if (movement.event) {
@@ -119,8 +120,8 @@ export function resolveTurn(state: ScenarioState, rules: EraRuleset = getEraRule
     turn,
     elapsedHours: state.elapsedHours + hours,
     events,
-    units: Object.values(resolvedState.units),
-    resourceDeltas: [...deltas.values()],
+    units: Object.values(resolvedState.units).sort(byUnitId),
+    resourceDeltas: [...deltas.values()].sort((a, b) => a.unitId.localeCompare(b.unitId)),
   };
 }
 
