@@ -12,6 +12,8 @@ export {
   type CanonicalSimulationSessionStepResult,
 } from './core/canonicalSimulationSession';
 
+export { formatSimulationReport } from './core/reportFormatter';
+
 export type { CanonicalState } from './core/canonicalState';
 export type { CombatAllocationPolicy, CombatLossCounts } from './core/canonicalCombatAllocation';
 export {
