@@ -200,7 +200,7 @@ B16 — CLI/API boundary: **CLOSED / PASS.** Direct inspection verified that ext
 
 B17 — Visualization projection: **CLOSED / PASS.** Direct inspection verified that ORBAT Mapper remains a consumer/projection layer over canonical scenario state and export configuration; it does not own competing simulation state, turn resolution, resource accounting, movement/detection/combat authority, or a parallel simulation session. The inspected ORBAT Mapper settings/export boundary reads canonical scenario state and writes only export-form data. No B17 code change was required; closed as a verification-only task.
 
-B18 — Standalone reporting: DWST must support operation without a graphical map by producing deterministic written simulation reports suitable for a chat-like interaction, using the same Core session as other consumers.
+B18 — Standalone reporting: **CLOSED / PASS.** Implemented a deterministic written-report formatter over the canonical `SimulationReport` contract, with regression coverage for stable output. The formatter is a presentation/consumer layer only: it interprets authoritative Core results and does not perform simulation, mutate canonical state, or create a parallel session. Validation CI runs 33449276707, 33449284449, and 33449295147 are green for type-check and the full unit suite. Closed after direct acceptance review and CI verification.
 
 B19 — Reporting determinism: identical simulation inputs must produce stable machine-readable and human-readable reports apart from explicitly permitted presentation metadata.
 
