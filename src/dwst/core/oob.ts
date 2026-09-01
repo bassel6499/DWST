@@ -1,8 +1,8 @@
 import type { UnitState } from './types';
-import type { EquipmentPool } from './equipment';
-import type { CrewExperiencePool } from './crewExperience';
 
 export type Echelon='team'|'squad'|'platoon'|'company'|'battalion'|'regiment'|'brigade'|'division'|'corps'|'army'|'armyGroup';
+export interface EquipmentPool { type:string; operational:number; damaged:number; destroyed:number; missing?:number; }
+export interface CrewExperiencePool { specialty:string; ready:number; training:number; casualties?:number; }
 export interface FormationNode { id:string; name:string; echelon:Echelon; parentId?:string; childIds:string[]; unitIds:string[]; equipment:EquipmentPool[]; crews:CrewExperiencePool[]; }
 export interface OrderOfBattle { formations:Record<string,FormationNode>; units:Record<string,UnitState>; }
 export interface AggregatedFormation { id:string; name:string; echelon:Echelon; personnel:number; equipmentOperational:number; equipmentDestroyed:number; equipmentDamaged:number; crewReady:number; children:AggregatedFormation[]; }
