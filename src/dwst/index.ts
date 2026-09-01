@@ -8,7 +8,7 @@
 export { startCanonicalSimulation, advanceCanonicalSimulation, type CanonicalSimulationSession, type CanonicalSimulationSessionStepResult } from './core/canonicalSimulationSession';
 export { formatSimulationReport } from './core/reportFormatter';
 export type { CanonicalState } from './core/canonicalState';
-export type { CombatContext, CombatUnitContext } from './core/combatContext';
+export type { CombatContext, CombatUnitContext, CombatContextProvider } from './core/combatContext';
 export type { CombatAllocationPolicy, CombatLossCounts } from './core/canonicalCombatAllocation';
 export { getEraRuleset, getImplementedEraRulesets, validateEraRuleset, ERA_RULESETS, DEFAULT_ENGINE, DEFAULT_DETECTION_POLICY, type EraRuleset, type EngineCoefficients, type UnitAssessmentPolicy, type DetectionPolicy, type DetectionSensorType, type CombatResolver, type CombatResult, type CombatLaw } from './core/eraRules';
 export { validateScenario } from './core/scenarioValidation';
