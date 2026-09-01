@@ -5,12 +5,10 @@ import {
   advanceCanonicalSimulation,
   startCanonicalSimulation,
   resolveOrderDestination,
-  type CanonicalState,
   type CombatAllocationPolicy,
   type Order,
-  type UnitState,
 } from '@/dwst';
-import { ardennes1944 } from '@/dwst/scenarios/ardennes1944';
+import { demoCanonical, demoScenario } from './demoCanonicalFixture';
 
 const policy: CombatAllocationPolicy = {
   personnelDisposition: 'killed',
@@ -20,50 +18,7 @@ const policy: CombatAllocationPolicy = {
   selection: 'stable-id',
 };
 
-const makeUnit = (id: string, name: string, side: UnitState['side'], lon: number, lat: number): UnitState => ({
-  id, name, side, echelon: 'division', personnel: 10000, equipment: 250, ammunition: 0.85, fuel: 0.85,
-  readiness: 0.9, training: 0.85, experience: 0.75, morale: 0.85, cohesion: 0.85, fatigue: 0.1,
-  wear: 0.05, logistics: 0.9, commandQuality: 0.85, intelligence: 0.7, combatPower: 1,
-  status: 'operational', position: { lon, lat }, cumulativeLosses: 0, history: [],
-});
-
-const scenario = {
-  id: 'ardennes-1944-demo', name: 'Ardennes 1944 — Operational Prototype', era: 'ww2' as const, scale: 'operational' as const, turnHours: 6,
-  elapsedHours: 0, weather: 1, terrain: 1, intelLevel: 0.7,
-  units: {
-    'de-2pz': makeUnit('de-2pz', '2nd Panzer Division', 'enemy', 5.8, 50.05),
-    'de-pzlehr': makeUnit('de-pzlehr', 'Panzer Lehr Division', 'enemy', 5.9, 49.95),
-    'us-101': makeUnit('us-101', '101st Airborne Division', 'allied', 5.72, 50.0),
-    'us-4arm': makeUnit('us-4arm', '4th Armored Division', 'allied', 5.55, 49.85),
-  }, events: [], locations: ardennes1944.locations,
-};
-
-const canonical: CanonicalState = {
-  personnel: {
-    personnel: Object.values(scenario.units).flatMap((unit) => Array.from({ length: unit.personnel }, (_, index) => ({
-      id: `${unit.id}-p-${index}`,
-      unitId: unit.id,
-      status: 'assigned' as const,
-      qualifications: [],
-      experience: {},
-    }))),
-  },
-  equipment: Object.values(scenario.units).flatMap((unit) => Array.from({ length: unit.equipment }, (_, index) => ({
-    instanceId: `${unit.id}-e-${index}`,
-    definitionId: 'demo-equipment',
-    unitId: unit.id,
-    status: 'operational' as const,
-  }))),
-  crewAssignments: [],
-  equipmentDefinitions: [],
-  consumables: Object.values(scenario.units).map((unit) => ({
-    unitId: unit.id,
-    ammunition: unit.ammunition,
-    fuel: unit.fuel,
-  })),
-};
-
-const session = ref(startCanonicalSimulation(scenario, canonical));
+const session = ref(startCanonicalSimulation(demoScenario, demoCanonical));
 const state = computed(() => session.value.state);
 const units = computed(() => Object.values(state.value.units));
 const report = ref<string[]>(['Scenario initialized. Issue an order to begin.']);
