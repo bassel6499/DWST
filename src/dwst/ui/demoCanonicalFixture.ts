@@ -20,8 +20,8 @@ const makeUnit = (
   name,
   side,
   echelon: 'division',
-  personnel: 10000,
-  equipment: 250,
+  personnel: 100,
+  equipment: 10,
   ammunition: 0.85,
   fuel: 0.85,
   readiness: 0.9,
@@ -62,9 +62,9 @@ export const demoScenario: ScenarioState = {
 };
 
 /**
- * Canonical demo resources. These are synthetic operational records used to
- * exercise the canonical resource pipeline; the historical Ardennes scenario
- * remains a separate scenario data source and is not rewritten here.
+ * Canonical demo resources. These are deliberately small synthetic records
+ * used to exercise the canonical resource pipeline. The historical Ardennes
+ * scenario remains a separate scenario data source and is not rewritten here.
  */
 export const demoCanonical: CanonicalState = {
   personnel: {
