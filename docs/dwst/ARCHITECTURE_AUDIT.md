@@ -40,16 +40,14 @@ Resolution emits typed resource deltas when resources are consumed or combat los
 ### 8. Legacy spatial/state prototypes — resolved constraints
 Earlier audit notes about `BattlefieldState`/`simulationState.ts` and local Cartesian distance describe historical findings, not current operational authority. `simulationState.ts` is not an operational consumer. Geographic distance in the canonical detection path uses the explicit geographic-distance operation; local map/screen coordinates remain presentation concerns.
 
-## Remaining architectural findings
+### 9. Era capability contract — P2-S29 CLOSED
+Simulation entry validates that the selected era is runnable, including the required era-owned implementations, before projecting state or beginning a turn. Unsupported scaffold eras fail at entry.
 
-### P2-S29 — Era capability contract
-Simulation entry must validate that the selected era is runnable, including required era-owned implementations, before projecting state or beginning a turn. Unsupported scaffold eras must fail at entry.
+### 10. Documentation synchronization — P2-S30 CLOSED
+This architecture audit and the canonical resource-accounting documentation describe the current tree and distinguish historical evidence from current operational authority. The Master Refactor Plan remains authoritative for finding status.
 
-### P2-S30 — Documentation synchronization
-This document, canonical resource-accounting documentation, and relevant notes must describe the current tree rather than retired prototypes as live architecture. Historical evidence notes may retain their original finding/date, but must clearly distinguish the historical finding from the current resolved state.
-
-### P2-S31 — Canonical ownership semantics
-Canonical personnel/equipment records still require explicit semantics for unassigned records. `unitId` must not remain ambiguous where a non-unit ownership model is intended.
+### 11. Canonical ownership semantics — P2-S31 CLOSED
+Canonical personnel/equipment records use explicit ownership semantics for unassigned records; `unitId` is not treated as an implicit authority-bearing ownership model where another ownership state is intended.
 
 ## Non-negotiable invariants
 1. Deterministic: identical inputs, state, rules, and explicit RNG state produce identical outputs.
