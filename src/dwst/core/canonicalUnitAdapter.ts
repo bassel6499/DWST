@@ -1,34 +1,52 @@
-import type { EquipmentDefinition } from './equipmentCatalog';
-import type { EquipmentInstance } from './equipmentInstances';
-import type { InstanceCrewAssignment } from './instanceCrewAssignments';
-import type { PersonnelRegistry } from './personnelRegistry';
-import { projectCanonicalUnit } from './canonicalProjection';
+import type { CanonicalState } from './canonicalState';
+import { projectCanonicalUnit, type CanonicalUnitProjection } from './canonicalProjection';
 
-export interface CanonicalUnitResourcePatch {
-  personnel:number;
-  equipment:number;
-  readiness:number;
+export interface CanonicalUnitResources {
+  personnel: number;
+  equipment: number;
+  ammunition: number;
+  fuel: number;
+  equipmentOperational: number;
+  equipmentDamaged: number;
+  equipmentDestroyed: number;
+  equipmentMissing: number;
+  crewRequired: number;
+  crewReady: number;
+  equipmentReady: number;
+  /** Fraction of operational equipment that is fully crew-ready; not UnitState.readiness. */
+  equipmentReadiness: number;
 }
 
-/**
- * Pure adapter from authoritative canonical resources to the resource fields
- * already consumed by UnitState. It does not mutate canonical state or any
- * UnitState object, and it does not synthesize individual resources.
- */
+/** Pure adapter from authoritative canonical records to resource-only simulation inputs. */
 export function projectCanonicalUnitResources(
- unitId:string,
- registry:PersonnelRegistry,
- instances:EquipmentInstance[],
- assignments:InstanceCrewAssignment[],
- definitions:EquipmentDefinition[],
-):CanonicalUnitResourcePatch{
- const projection=projectCanonicalUnit(unitId,registry,instances,assignments,definitions);
- const readiness=projection.equipmentOperational===0
-  ? 0
-  : projection.equipmentReady/projection.equipmentOperational;
- return {
-  personnel:projection.personnel,
-  equipment:projection.equipment,
-  readiness:Math.max(0,Math.min(1,readiness)),
- };
+  unitId: string,
+  canonicalState: CanonicalState,
+): CanonicalUnitResources {
+  const projection: CanonicalUnitProjection = projectCanonicalUnit(
+    unitId,
+    canonicalState.personnel,
+    canonicalState.equipment,
+    canonicalState.crewAssignments,
+    canonicalState.equipmentDefinitions,
+    canonicalState.consumables,
+  );
+
+  const equipmentReadiness = projection.equipmentOperational === 0
+    ? 0
+    : projection.equipmentReady / projection.equipmentOperational;
+
+  return {
+    personnel: projection.personnel,
+    equipment: projection.equipment,
+    ammunition: projection.ammunition,
+    fuel: projection.fuel,
+    equipmentOperational: projection.equipmentOperational,
+    equipmentDamaged: projection.equipmentDamaged,
+    equipmentDestroyed: projection.equipmentDestroyed,
+    equipmentMissing: projection.equipmentMissing,
+    crewRequired: projection.crewRequired,
+    crewReady: projection.crewReady,
+    equipmentReady: projection.equipmentReady,
+    equipmentReadiness,
+  };
 }
