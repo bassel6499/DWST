@@ -24,8 +24,8 @@ const unit = (id: string, side: UnitState['side'], index: number): UnitState => 
   echelon: 'battalion',
   personnel: PERSONNEL_PER_UNIT,
   equipment: EQUIPMENT_PER_UNIT,
-  ammunition: 100,
-  fuel: 100,
+  ammunition: 1,
+  fuel: 1,
   readiness: 1,
   training: 1,
   experience: 1,
@@ -93,8 +93,8 @@ const canonical = (): CanonicalState => ({
   }],
   consumables: Array.from({ length: UNIT_COUNT }, (_, unitIndex) => ({
     unitId: `bench-${String(unitIndex + 1).padStart(3, '0')}`,
-    ammunition: 100,
-    fuel: 100,
+    ammunition: 1,
+    fuel: 1,
   })),
 });
 
