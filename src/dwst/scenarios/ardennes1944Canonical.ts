@@ -108,14 +108,17 @@ const equipment: EquipmentInstance[] = [];
 const crewAssignments: InstanceCrewAssignment[] = [];
 
 for (const plan of resourcePlans) {
+  const personnelById = new Map<string, PersonnelRecord>();
   for (let index = 0; index < plan.personnel; index += 1) {
-    personnel.push({
+    const record: PersonnelRecord = {
       id: `${plan.unitId}-personnel-${index + 1}`,
       unitId: plan.unitId,
       status: 'assigned',
       qualifications: [],
       experience: index < Math.ceil(plan.personnel * 0.08) ? { veteran: 1 } : { experienced: 1 },
-    });
+    };
+    personnel.push(record);
+    personnelById.set(record.id, record);
   }
 
   let personnelCursor = 0;
@@ -129,7 +132,7 @@ for (const plan of resourcePlans) {
         status: 'operational',
       });
       for (let slot = 1; slot <= 5; slot += 1) {
-        const person = personnel.find((record) => record.id === `${plan.unitId}-personnel-${personnelCursor + 1}`);
+        const person = personnelById.get(`${plan.unitId}-personnel-${personnelCursor + 1}`);
         if (!person) throw new Error(`Canonical Ardennes crew allocation overflow for ${plan.unitId}`);
         person.qualifications = [TANK_CREW];
         crewAssignments.push({
