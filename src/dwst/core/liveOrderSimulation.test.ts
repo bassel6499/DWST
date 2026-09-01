@@ -44,7 +44,7 @@ describe('live movement-order integration', () => {
     const unit = Object.values(state.units)[0];
     const parsed = parseNaturalLanguageOrder('move toward Bastogne', unit);
     const resolved = resolveOrderDestination(state, parsed.order);
-    const bastogne = state.locations?.[0];
+    const bastogne = state.locations?.find((location) => location.name === 'Bastogne');
 
     expect(parsed.order.objective).toBe('Bastogne');
     expect(bastogne).toBeDefined();
