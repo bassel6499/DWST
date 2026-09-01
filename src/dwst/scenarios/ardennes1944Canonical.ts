@@ -28,25 +28,22 @@ interface FormationResourcePlan {
 
 /*
  * Deterministic historical starting-resource selections for 16 Dec 1944.
- * Ranges found in the literature are resolved here to one reproducible value;
- * the scenario never stores a personnel/equipment aggregate as authoritative
- * state. The generated records below are the canonical resource state.
+ * These plans are construction inputs only: the authoritative simulation state
+ * is the generated individual personnel/equipment/crew records below.
+ * Ranges found in historical records are resolved to one reproducible value.
  *
- * Key evidence used for the selections:
- * - Cole/US Army history: 1 SS Panzer Division ~100 Pz IV/Panther + 42 Tigers;
- *   2 Panzer Division 27 Pz IV + 58 Panthers + 48 assault guns.
- * - Panzer Lehr: 14,892 personnel, 27 Pz IV, 30 Panthers, 20 Jagdpanzer IV/70.
- * - 26 VGD: 9,951 divisional personnel, separating attached ration-strength assets.
- * - 18/62 VGD: approximately 10,000 each, consistent with the 1944 VGD structure.
- * - 101st Airborne: 805 officers + 11,035 enlisted = 11,840.
- * - 7th Armored: best-supported operational estimate 14,000 personnel and
- *   256 tanks on 16 Dec (174 Shermans, 82 Stuarts).
+ * High-confidence formation-specific figures are preferred where available.
+ * Examples include Cole/US Army figures for 1 SS, 2 Panzer and Panzer Lehr,
+ * the documented 26 VGD divisional strength, and the 101st/7th Armored figures.
+ * For formations whose surviving records do not give a clean same-day total,
+ * a single conservative best estimate is used rather than storing a range.
  *
  * The current engine has only a generic WWII tank crew requirement, so assault
  * guns/tank destroyers are represented by explicit equipment definitions using
  * that generic crew contract rather than being silently dropped.
  */
 const resourcePlans: FormationResourcePlan[] = [
+  // German 6th Panzer Army / northern shoulder.
   { unitId: 'g-1ss', personnel: 21000, equipment: [
     { definitionId: 'ww2-pziv', count: 50 },
     { definitionId: 'ww2-panther', count: 50 },
@@ -56,6 +53,11 @@ const resourcePlans: FormationResourcePlan[] = [
     { definitionId: 'ww2-pziv', count: 37 },
     { definitionId: 'ww2-panther', count: 38 },
   ], ammunition: 0.84, fuel: 0.70 },
+  { unitId: 'g-3fj', personnel: 12000, equipment: [], ammunition: 0.74, fuel: 0.60 },
+  { unitId: 'g-326vgd', personnel: 12000, equipment: [], ammunition: 0.68, fuel: 0.58 },
+  { unitId: 'g-277vgd', personnel: 11000, equipment: [], ammunition: 0.68, fuel: 0.58 },
+
+  // German 5th Panzer Army / central sector.
   { unitId: 'g-2pd', personnel: 14400, equipment: [
     { definitionId: 'ww2-pziv', count: 27 },
     { definitionId: 'ww2-panther', count: 58 },
@@ -69,6 +71,31 @@ const resourcePlans: FormationResourcePlan[] = [
   { unitId: 'g-26vgd', personnel: 9951, equipment: [], ammunition: 0.68, fuel: 0.60 },
   { unitId: 'g-18vgd', personnel: 10000, equipment: [], ammunition: 0.70, fuel: 0.62 },
   { unitId: 'g-62vgd', personnel: 10000, equipment: [], ammunition: 0.70, fuel: 0.62 },
+  { unitId: 'g-116pd', personnel: 15000, equipment: [], ammunition: 0.74, fuel: 0.64 },
+  { unitId: 'g-560vgd', personnel: 10000, equipment: [], ammunition: 0.66, fuel: 0.58 },
+
+  // German 7th Army / southern sector.
+  { unitId: 'g-5fj', personnel: 11000, equipment: [], ammunition: 0.70, fuel: 0.58 },
+  { unitId: 'g-352vgd', personnel: 12000, equipment: [], ammunition: 0.68, fuel: 0.58 },
+  { unitId: 'g-212vgd', personnel: 10000, equipment: [], ammunition: 0.66, fuel: 0.56 },
+  { unitId: 'g-276vgd', personnel: 10000, equipment: [], ammunition: 0.66, fuel: 0.56 },
+
+  // U.S. V Corps / northern shoulder. Strength estimates are fixed single
+  // values for determinism; the simulation does not store ranges.
+  { unitId: 'a-99id', personnel: 13725, equipment: [], ammunition: 0.82, fuel: 0.78 },
+  { unitId: 'a-2id', personnel: 14000, equipment: [], ammunition: 0.84, fuel: 0.80 },
+
+  // U.S. VIII Corps / central and southern sectors.
+  { unitId: 'a-106id', personnel: 14000, equipment: [], ammunition: 0.80, fuel: 0.76 },
+  { unitId: 'a-28id', personnel: 13400, equipment: [], ammunition: 0.82, fuel: 0.76 },
+  { unitId: 'a-9ad', personnel: 15000, equipment: [
+    { definitionId: 'us-m4-sherman', count: 170 },
+    { definitionId: 'us-m5-stuart', count: 34 },
+  ], ammunition: 0.78, fuel: 0.74 },
+  { unitId: 'a-4id', personnel: 14000, equipment: [], ammunition: 0.82, fuel: 0.76 },
+
+  // Reinforcements/reserves. These exist canonically but begin off the opening
+  // line and are moved by the scenario orders/events.
   { unitId: 'a-101ab', personnel: 11840, equipment: [], ammunition: 0.82, fuel: 0.78 },
   { unitId: 'a-7ad', personnel: 14000, equipment: [
     { definitionId: 'us-m4-sherman', count: 174 },
