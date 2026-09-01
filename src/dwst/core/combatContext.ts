@@ -18,3 +18,5 @@ export interface CombatContext {
   readonly attacker?: CombatUnitContext;
   readonly defender?: CombatUnitContext;
 }
+
+export type CombatContextProvider = (unitId: string) => CombatContext | undefined;
