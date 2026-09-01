@@ -20,7 +20,8 @@ const unit = (id: string, side: UnitState['side']): UnitState => ({
   ammunition: 10, fuel: 10, readiness: 1, training: 1, experience: 1,
   morale: 1, cohesion: 1, fatigue: 0, wear: 0, logistics: 1,
   commandQuality: 1, intelligence: 1, combatPower: 100, status: 'operational',
-  position: { lat: 0, lon: 0 }, cumulativeLosses: 0, history: [], order: { type: 'attack' },
+  position: { lat: 0, lon: 0 }, cumulativeLosses: 0, history: [],
+  order: { type: 'attack', destination: { lat: 0.01, lon: 0 } },
 });
 
 const scenario = (): ScenarioState => ({
@@ -89,6 +90,8 @@ describe('B22 full-system simulation', () => {
     assert.equal(session.provenance.commands.length, 10);
     assert.deepEqual(session.provenance.commands.map((command) => command.sequence), Array.from({ length: 10 }, (_, index) => index));
     assert.equal(session.provenance.rulesetContentHash, getRulesetContentHash(getEraRuleset('ww2')));
+    assert.ok(session.state.events.some((event) => event.phase === 'movement'));
+    assert.ok(session.state.events.some((event) => event.phase === 'combat'));
     assert.deepEqual(input, inputBefore);
     assert.deepEqual(sourceCanonical, canonicalBefore);
   });
