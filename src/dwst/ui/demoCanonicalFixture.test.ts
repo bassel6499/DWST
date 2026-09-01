@@ -17,12 +17,12 @@ describe('canonical demo fixture', () => {
 
     assert.equal(demoCanonical.equipmentDefinitions.length, 1);
     assert.equal(demoCanonical.equipmentDefinitions[0]?.id, 'demo-equipment');
-    assert.equal(demoCanonical.crewAssignments.length, 5000);
+    assert.equal(demoCanonical.crewAssignments.length, 200);
     assert.equal(demoCanonical.consumables.length, 4);
 
     for (const unit of Object.values(session.state.units)) {
-      assert.equal(unit.personnel, 10000);
-      assert.equal(unit.equipment, 250);
+      assert.equal(unit.personnel, 100);
+      assert.equal(unit.equipment, 10);
       assert.equal(unit.ammunition, 0.85);
       assert.equal(unit.fuel, 0.85);
     }
