@@ -1,4 +1,4 @@
-import type { EquipmentDefinition } from './equipmentCatalog';
+import { EquipmentDefinition } from './equipmentCatalog';
 import { resolveCrewRequirement, validateEquipmentDefinition } from './equipmentCatalog';
 import type { EquipmentInstance } from './equipmentInstances';
 import type { InstanceCrewAssignment } from './instanceCrewAssignments';
@@ -18,6 +18,7 @@ export interface CanonicalUnitProjection {
   crewRequired:number;
   crewReady:number;
   equipmentReady:number;
+  equipmentByType:Readonly<Record<string,number>>;
 }
 
 /**
@@ -46,10 +47,12 @@ export function projectCanonicalUnit(unitId:string,registry:PersonnelRegistry,in
   if(instance?.unitId===unitId){const list=assignedByInstance.get(a.instanceId)??[];list.push(a);assignedByInstance.set(a.instanceId,list);}
  }
  let crewRequired=0,crewReady=0,equipmentReady=0;
+ const equipmentByType:Record<string,number>={};
  for(const instance of unitInstances){
-  if(instance.status!=='operational') continue;
   const definition=definitionMap.get(instance.definitionId);
   if(!definition) throw new Error(`Missing equipment definition ${instance.definitionId} for unit ${unitId}`);
+  equipmentByType[definition.equipmentType]=(equipmentByType[definition.equipmentType]??0)+1;
+  if(instance.status!=='operational') continue;
   const validationErrors=validateEquipmentDefinition(definition);
   if(validationErrors.length) throw new Error(`Invalid equipment definition ${definition.id} for unit ${unitId}: ${validationErrors.join('; ')}`);
   const requirement=resolveCrewRequirement(definition);
@@ -59,5 +62,5 @@ export function projectCanonicalUnit(unitId:string,registry:PersonnelRegistry,in
   crewReady+=Math.min(ready.length,requirement.requiredQualifiedCrew);
   if(ready.length>=requirement.requiredQualifiedCrew) equipmentReady++;
  }
- return {unitId,personnel:unitPersonnel.length,equipment:unitInstances.length,ammunition:consumable.ammunition,fuel:consumable.fuel,equipmentOperational:unitInstances.filter(i=>i.status==='operational').length,equipmentDamaged:unitInstances.filter(i=>i.status==='damaged').length,equipmentDestroyed:unitInstances.filter(i=>i.status==='destroyed').length,equipmentMissing:unitInstances.filter(i=>i.status==='missing').length,crewRequired,crewReady,equipmentReady};
+ return {unitId,personnel:unitPersonnel.length,equipment:unitInstances.length,ammunition:consumable.ammunition,fuel:consumable.fuel,equipmentOperational:unitInstances.filter(i=>i.status==='operational').length,equipmentDamaged:unitInstances.filter(i=>i.status==='damaged').length,equipmentDestroyed:unitInstances.filter(i=>i.status==='destroyed').length,equipmentMissing:unitInstances.filter(i=>i.status==='missing').length,crewRequired,crewReady,equipmentReady,equipmentByType};
 }
