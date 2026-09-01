@@ -1,14 +1,8 @@
 import { describe,expect,it } from 'vitest';
 import { applyCombatResult } from './combatState';
 import type { UnitState } from './types';
-
 const unit=(id:string):UnitState=>({id,name:id,side:id==='a'?'allied':'enemy',echelon:'division',personnel:1000,equipment:100,ammunition:0.8,fuel:0.7,readiness:0.9,training:0.8,experience:0.8,morale:0.9,cohesion:0.9,fatigue:0.1,wear:0.1,logistics:0.8,commandQuality:0.8,intelligence:0.8,combatPower:1,status:'operational',position:{lon:35,lat:34},cumulativeLosses:0,history:[]});
-
 describe('applyCombatResult',()=>{
- it('commits explicit ammunition, fuel, readiness and morale deltas without mutation',()=>{
-  const a=unit('a'),d=unit('d'),before=JSON.stringify({a,d});
-  const result=applyCombatResult(a,d,{attackerLosses:10,defenderLosses:20,attackerEquipmentLosses:2,defenderEquipmentLosses:3,attackerAmmunitionDelta:-0.04,defenderAmmunitionDelta:-0.03,attackerFuelDelta:-0.01,defenderFuelDelta:-0.02,attackerReadinessDelta:-0.03,defenderReadinessDelta:-0.02,attackerMoraleDelta:-0.02,defenderMoraleDelta:-0.01});
-  expect(result.attacker.ammunition).toBeCloseTo(0.76);expect(result.defender.ammunition).toBeCloseTo(0.77);expect(result.attacker.fuel).toBeCloseTo(0.69);expect(result.defender.fuel).toBeCloseTo(0.68);expect(result.attacker.readiness).toBeLessThan(a.readiness);expect(result.defender.morale).toBeLessThan(d.morale);expect(JSON.stringify({a,d})).toBe(before);
- });
- it('rejects positive combat resource deltas',()=>{const a=unit('a'),d=unit('d');const result=applyCombatResult(a,d,{attackerLosses:0,defenderLosses:0,attackerEquipmentLosses:0,defenderEquipmentLosses:0,attackerAmmunitionDelta:0.2,defenderFuelDelta:0.2});expect(result.attacker.ammunition).toBe(a.ammunition);expect(result.defender.fuel).toBe(d.fuel);});
+ it('commits explicit ammunition, fuel, readiness and morale deltas without mutation',()=>{const a=unit('a'),d=unit('d'),before=JSON.stringify({a,d});const result=applyCombatResult(a,d,{attackerLosses:10,defenderLosses:20,attackerEquipmentLosses:2,defenderEquipmentLosses:3,attackerAmmunitionDelta:-0.04,defenderAmmunitionDelta:-0.03,attackerFuelDelta:-0.01,defenderFuelDelta:-0.02,attackerReadinessDelta:-0.03,defenderReadinessDelta:-0.02,attackerMoraleDelta:-0.02,defenderMoraleDelta:-0.01});expect(result.attacker.ammunition).toBeCloseTo(0.76);expect(result.defender.ammunition).toBeCloseTo(0.77);expect(result.attacker.fuel).toBeCloseTo(0.69);expect(result.defender.fuel).toBeCloseTo(0.68);expect(result.attacker.readiness).toBeLessThan(a.readiness);expect(result.defender.morale).toBeLessThan(d.morale);expect(JSON.stringify({a,d})).toBe(before);});
+ it('never permits positive combat resource deltas to increase state',()=>{const a=unit('a'),d=unit('d');const result=applyCombatResult(a,d,{attackerLosses:0,defenderLosses:0,attackerEquipmentLosses:0,defenderEquipmentLosses:0,attackerAmmunitionDelta:0.2,defenderFuelDelta:0.2});expect(result.attacker.ammunition).toBe(a.ammunition);expect(result.defender.fuel).toBe(d.fuel);});
 });
