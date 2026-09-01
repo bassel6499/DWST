@@ -60,8 +60,8 @@ const assertCanonicalProjection = (session: CanonicalSimulationSession): void =>
   }
 };
 
-const runScenario = (): CanonicalSimulationSession => {
-  let session = startCanonicalSimulation(scenario(), canonical());
+const runScenario = (input = scenario(), sourceCanonical = canonical()): CanonicalSimulationSession => {
+  let session = startCanonicalSimulation(input, sourceCanonical);
   assert.equal(session.rules.id, 'ww2');
   assert.equal(session.provenance.rulesetContentHash, getRulesetContentHash(getEraRuleset('ww2')));
   for (let i = 0; i < 5; i += 1) {
@@ -84,7 +84,7 @@ describe('B22 full-system simulation', () => {
     const sourceCanonical = canonical();
     const inputBefore = structuredClone(input);
     const canonicalBefore = structuredClone(sourceCanonical);
-    const session = runScenario();
+    const session = runScenario(input, sourceCanonical);
     assertCanonicalProjection(session);
     assert.equal(session.provenance.commands.length, 10);
     assert.deepEqual(session.provenance.commands.map((command) => command.sequence), Array.from({ length: 10 }, (_, index) => index));
