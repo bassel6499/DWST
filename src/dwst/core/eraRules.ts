@@ -62,6 +62,10 @@ export interface CombatResult {
   defenderAmmunitionDelta: number;
   attackerFuelDelta: number;
   defenderFuelDelta: number;
+  attackerReadinessDelta: number;
+  defenderReadinessDelta: number;
+  attackerMoraleDelta: number;
+  defenderMoraleDelta: number;
 }
 
 export type CombatResolver = (input: {
@@ -166,6 +170,10 @@ const ww2Combat: CombatResolver = ({ attacker, defender, state, surprise, contex
     defenderAmmunitionDelta: result.defenderAmmunitionDelta,
     attackerFuelDelta: result.attackerFuelDelta,
     defenderFuelDelta: result.defenderFuelDelta,
+    attackerReadinessDelta: result.attackerReadinessDelta,
+    defenderReadinessDelta: result.defenderReadinessDelta,
+    attackerMoraleDelta: result.attackerMoraleDelta,
+    defenderMoraleDelta: result.defenderMoraleDelta,
   };
 };
 
