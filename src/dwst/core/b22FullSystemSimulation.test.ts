@@ -17,7 +17,7 @@ const policy: CombatAllocationPolicy = {
 
 const unit = (id: string, side: UnitState['side']): UnitState => ({
   id, name: id, side, echelon: 'battalion', personnel: 100, equipment: 20,
-  ammunition: 10, fuel: 10, readiness: 1, training: 1, experience: 1,
+  ammunition: 0.5, fuel: 0.5, readiness: 1, training: 1, experience: 1,
   morale: 1, cohesion: 1, fatigue: 0, wear: 0, logistics: 1,
   commandQuality: 1, intelligence: 1, combatPower: 100, status: 'operational',
   position: { lat: 0, lon: 0 }, cumulativeLosses: 0, history: [],
@@ -45,7 +45,7 @@ const canonical = (): CanonicalState => ({
   ],
   crewAssignments: [],
   equipmentDefinitions: [{ id: 'eq', name: 'B22 test vehicle', era: 'WWII', equipmentType: 'tank', crewRequirementId: 'WWII:tank:tankCrew' }],
-  consumables: [{ unitId: 'u1', ammunition: 10, fuel: 10 }, { unitId: 'u2', ammunition: 10, fuel: 10 }],
+  consumables: [{ unitId: 'u1', ammunition: 0.5, fuel: 0.5 }, { unitId: 'u2', ammunition: 0.5, fuel: 0.5 }],
 });
 
 const assertCanonicalProjection = (session: CanonicalSimulationSession): void => {
