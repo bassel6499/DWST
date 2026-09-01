@@ -1,4 +1,4 @@
-import { bench, describe } from 'vitest';
+import { bench, beforeEach, describe } from 'vitest';
 import type { CanonicalState } from './canonicalState';
 import type { ScenarioState, UnitState } from './types';
 import { advanceCanonicalSimulation, startCanonicalSimulation } from './canonicalSimulationSession';
@@ -98,21 +98,24 @@ const canonical = (): CanonicalState => ({
   })),
 });
 
-const freshSession = () => startCanonicalSimulation(scenario(), canonical());
+let preparedSession = startCanonicalSimulation(scenario(), canonical());
+
+beforeEach(() => {
+  preparedSession = startCanonicalSimulation(scenario(), canonical());
+});
 
 describe('canonical simulation performance profile', () => {
   bench(`start canonical simulation (${UNIT_COUNT} units)`, () => {
-    freshSession();
-  });
+    startCanonicalSimulation(scenario(), canonical());
+  }, { warmupIterations: 3 });
 
   bench(`advance one canonical turn (${UNIT_COUNT} units)`, () => {
-    const session = freshSession();
-    const result = advanceCanonicalSimulation(session, policy);
+    const result = advanceCanonicalSimulation(preparedSession, policy);
     if (result.report.turn !== 1) throw new Error(`Expected turn 1, got ${result.report.turn}`);
-  });
+  }, { warmupIterations: 3 });
 
   bench(`advance ${TURN_COUNT} canonical turns (${UNIT_COUNT} units)`, () => {
-    let session = freshSession();
+    let session = preparedSession;
     for (let turn = 0; turn < TURN_COUNT; turn += 1) {
       const result = advanceCanonicalSimulation(session, policy);
       if (result.report.turn !== turn + 1) {
@@ -120,5 +123,5 @@ describe('canonical simulation performance profile', () => {
       }
       session = result.session;
     }
-  });
+  }, { warmupIterations: 3 });
 });
