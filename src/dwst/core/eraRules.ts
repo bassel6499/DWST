@@ -1,4 +1,5 @@
 import type { EraId, ScenarioState, UnitState } from './types';
+import type { CombatContext } from './combatContext';
 import { resolveWW2Combat } from '../scenarios/ww2/combat';
 
 export type CombatLaw =
@@ -37,11 +38,6 @@ export interface UnitAssessmentPolicy {
 
 export type DetectionSensorType = 'visual' | 'recon' | 'airRecon' | 'signals';
 
-/**
- * Era-owned detection parameters consumed by the generic contact pipeline.
- * The pipeline itself remains core-owned so eras do not duplicate contact
- * bookkeeping or geographic distance logic.
- */
 export interface DetectionPolicy {
   readonly baseUnaidedRangeKm: number;
   readonly sensorRangeModifiers: Readonly<Record<DetectionSensorType, number>>;
@@ -62,6 +58,10 @@ export interface CombatResult {
   defenderLosses: number;
   attackerEquipmentLosses: number;
   defenderEquipmentLosses: number;
+  attackerAmmunitionDelta: number;
+  defenderAmmunitionDelta: number;
+  attackerFuelDelta: number;
+  defenderFuelDelta: number;
 }
 
 export type CombatResolver = (input: {
@@ -69,6 +69,7 @@ export type CombatResolver = (input: {
   defender: UnitState;
   state: ScenarioState;
   surprise: number;
+  context?: CombatContext;
 }) => CombatResult;
 
 export interface EraRuleset {
@@ -85,7 +86,6 @@ export interface EraRuleset {
   readonly engine: EngineCoefficients;
   readonly unitAssessment: UnitAssessmentPolicy;
   readonly detection: DetectionPolicy;
-  /** Combat implementation owned by this era. Absent means the era is not runnable. */
   readonly resolveCombat?: CombatResolver;
   readonly notes: readonly string[];
 }
@@ -93,9 +93,7 @@ export interface EraRuleset {
 function deepFreeze<T extends object>(value: T): Readonly<T> {
   for (const key of Reflect.ownKeys(value)) {
     const child = value[key as keyof T];
-    if (child !== null && typeof child === 'object' && !Object.isFrozen(child)) {
-      deepFreeze(child as object);
-    }
+    if (child !== null && typeof child === 'object' && !Object.isFrozen(child)) deepFreeze(child as object);
   }
   return Object.freeze(value);
 }
@@ -122,12 +120,7 @@ export const DEFAULT_ENGINE: Readonly<EngineCoefficients> = deepFreeze({
 
 export const DEFAULT_DETECTION_POLICY: Readonly<DetectionPolicy> = deepFreeze({
   baseUnaidedRangeKm: 12,
-  sensorRangeModifiers: {
-    visual: 1,
-    recon: 1.25,
-    airRecon: 1.7,
-    signals: 1.1,
-  },
+  sensorRangeModifiers: { visual: 1, recon: 1.25, airRecon: 1.7, signals: 1.1 },
   intelligenceFloor: 0.65,
   intelligenceWeight: 0.35,
   readinessFloor: 0.7,
@@ -146,11 +139,9 @@ const DEFAULT_UNIT_ASSESSMENT: Readonly<UnitAssessmentPolicy> = deepFreeze({
   disorganizedCondition: 0.4,
 });
 
-const scaffoldNotes = [
-  'Ruleset scaffold only; not runnable until its era-specific mechanics are implemented and validated.',
-];
+const scaffoldNotes = ['Ruleset scaffold only; not runnable until its era-specific mechanics are implemented and validated.'];
 
-const ww2Combat: CombatResolver = ({ attacker, defender, state, surprise }) => {
+const ww2Combat: CombatResolver = ({ attacker, defender, state, surprise, context }) => {
   const result = resolveWW2Combat({
     attacker,
     defender,
@@ -163,22 +154,22 @@ const ww2Combat: CombatResolver = ({ attacker, defender, state, surprise }) => {
     airSupport: 0,
     maneuver: 0,
     command: 0,
+    attackerContext: context?.attacker,
+    defenderContext: context?.defender,
   });
-
   return {
     attackerLosses: result.attackerLosses,
     defenderLosses: result.defenderLosses,
     attackerEquipmentLosses: result.attackerEquipmentLosses,
     defenderEquipmentLosses: result.defenderEquipmentLosses,
+    attackerAmmunitionDelta: result.attackerAmmunitionDelta,
+    defenderAmmunitionDelta: result.defenderAmmunitionDelta,
+    attackerFuelDelta: result.attackerFuelDelta,
+    defenderFuelDelta: result.defenderFuelDelta,
   };
 };
 
-const base = (
-  id: EraId,
-  label: string,
-  combatLaw: CombatLaw,
-  turn: number,
-): EraRuleset => ({
+const base = (id: EraId, label: string, combatLaw: CombatLaw, turn: number): EraRuleset => ({
   id,
   label,
   implemented: false,
@@ -191,10 +182,7 @@ const base = (
   logisticsEnabled: true,
   engine: { ...DEFAULT_ENGINE },
   unitAssessment: { ...DEFAULT_UNIT_ASSESSMENT },
-  detection: {
-    ...DEFAULT_DETECTION_POLICY,
-    sensorRangeModifiers: { ...DEFAULT_DETECTION_POLICY.sensorRangeModifiers },
-  },
+  detection: { ...DEFAULT_DETECTION_POLICY, sensorRangeModifiers: { ...DEFAULT_DETECTION_POLICY.sensorRangeModifiers } },
   notes: [...scaffoldNotes],
 });
 
@@ -205,12 +193,7 @@ export const ERA_RULESETS: Readonly<Record<EraId, EraRuleset>> = deepFreeze({
   industrial: base('industrial', 'Industrial', 'square', 6),
   ww1: base('ww1', 'World War I', 'square', 6),
   interwar: base('interwar', 'Interwar', 'square', 6),
-  ww2: {
-    ...base('ww2', 'World War II', 'square', 6),
-    implemented: true,
-    resolveCombat: ww2Combat,
-    notes: ['First runnable DWST ruleset. Combined arms, operational maneuver and high-tempo logistics.'],
-  },
+  ww2: { ...base('ww2', 'World War II', 'square', 6), implemented: true, resolveCombat: ww2Combat, notes: ['First runnable DWST ruleset. Combined arms, operational maneuver and high-tempo logistics.'] },
   'early-cold-war': base('early-cold-war', 'Early Cold War', 'square', 3),
   'late-cold-war': base('late-cold-war', 'Late Cold War', 'square', 3),
   'post-cold-war': base('post-cold-war', 'Post-Cold War', 'contemporary-hybrid', 3),
@@ -218,92 +201,33 @@ export const ERA_RULESETS: Readonly<Record<EraId, EraRuleset>> = deepFreeze({
   future: base('future', 'Future', 'extended-square', 1),
 });
 
-export function getEraRuleset(id: EraId): EraRuleset {
-  return ERA_RULESETS[id];
-}
-
-export function getImplementedEraRulesets(): EraRuleset[] {
-  return Object.values(ERA_RULESETS).filter((r) => r.implemented);
-}
+export function getEraRuleset(id: EraId): EraRuleset { return ERA_RULESETS[id]; }
+export function getImplementedEraRulesets(): EraRuleset[] { return Object.values(ERA_RULESETS).filter((r) => r.implemented); }
 
 export function validateEraRuleset(r: EraRuleset): string[] {
   const errors: string[] = [];
-
   if (!r.id || !r.label) errors.push('Era ruleset requires id and label');
   if (r.defaultTurnHours <= 0) errors.push('defaultTurnHours must be positive');
-  if (r.permanentAttrition !== true) {
-    errors.push('permanentAttrition must remain enabled for DWST accounting');
-  }
-
-  for (const [key, value] of Object.entries(r.engine)) {
-    if (!Number.isFinite(value) || value < 0) {
-      errors.push(`engine.${key} must be a non-negative finite number`);
-    }
-  }
-
-  if (r.engine.movementHours <= 0) {
-    errors.push('engine.movementHours must be positive');
-  }
-
+  if (r.permanentAttrition !== true) errors.push('permanentAttrition must remain enabled for DWST accounting');
+  for (const [key, value] of Object.entries(r.engine)) if (!Number.isFinite(value) || value < 0) errors.push(`engine.${key} must be a non-negative finite number`);
+  if (r.engine.movementHours <= 0) errors.push('engine.movementHours must be positive');
   const assessment = r.unitAssessment;
-  if (
-    !assessment ||
-    !Number.isFinite(assessment.destroyedPersonnel) ||
-    !Number.isFinite(assessment.disorganizedPersonnel) ||
-    !Number.isFinite(assessment.disorganizedCondition)
-  ) {
+  if (!assessment || !Number.isFinite(assessment.destroyedPersonnel) || !Number.isFinite(assessment.disorganizedPersonnel) || !Number.isFinite(assessment.disorganizedCondition)) {
     errors.push('unitAssessment thresholds must be finite numbers');
   } else {
-    if (assessment.destroyedPersonnel < 0 || assessment.destroyedPersonnel > 1) {
-      errors.push('unitAssessment.destroyedPersonnel must be between 0 and 1');
-    }
-    if (assessment.disorganizedPersonnel < 0 || assessment.disorganizedPersonnel > 1) {
-      errors.push('unitAssessment.disorganizedPersonnel must be between 0 and 1');
-    }
-    if (assessment.disorganizedCondition < 0 || assessment.disorganizedCondition > 1) {
-      errors.push('unitAssessment.disorganizedCondition must be between 0 and 1');
-    }
-    if (assessment.destroyedPersonnel > assessment.disorganizedPersonnel) {
-      errors.push('unitAssessment.destroyedPersonnel must not exceed disorganizedPersonnel');
-    }
+    if (assessment.destroyedPersonnel < 0 || assessment.destroyedPersonnel > 1) errors.push('unitAssessment.destroyedPersonnel must be between 0 and 1');
+    if (assessment.disorganizedPersonnel < 0 || assessment.disorganizedPersonnel > 1) errors.push('unitAssessment.disorganizedPersonnel must be between 0 and 1');
+    if (assessment.disorganizedCondition < 0 || assessment.disorganizedCondition > 1) errors.push('unitAssessment.disorganizedCondition must be between 0 and 1');
+    if (assessment.destroyedPersonnel > assessment.disorganizedPersonnel) errors.push('unitAssessment.destroyedPersonnel must not exceed disorganizedPersonnel');
   }
-
   const detection = r.detection;
-  if (!detection || !Number.isFinite(detection.baseUnaidedRangeKm) || detection.baseUnaidedRangeKm < 0) {
-    errors.push('detection.baseUnaidedRangeKm must be a non-negative finite number');
-  } else {
-    const numericDetectionFields = [
-      'intelligenceFloor',
-      'intelligenceWeight',
-      'readinessFloor',
-      'readinessWeight',
-      'weatherFloor',
-      'weatherWeight',
-      'terrainFloor',
-      'terrainWeight',
-      'formationConfidenceThreshold',
-      'unitConfidenceThreshold',
-    ] as const;
-    for (const key of numericDetectionFields) {
-      const value = detection[key];
-      if (!Number.isFinite(value) || value < 0 || value > 1) {
-        errors.push(`detection.${key} must be between 0 and 1`);
-      }
-    }
-    for (const sensorType of Object.keys(DEFAULT_DETECTION_POLICY.sensorRangeModifiers) as DetectionSensorType[]) {
-      const value = detection.sensorRangeModifiers[sensorType];
-      if (!Number.isFinite(value) || value < 0) {
-        errors.push(`detection.sensorRangeModifiers.${sensorType} must be a non-negative finite number`);
-      }
-    }
-    if (detection.formationConfidenceThreshold < detection.unitConfidenceThreshold) {
-      errors.push('detection.formationConfidenceThreshold must not be below unitConfidenceThreshold');
-    }
+  if (!detection || !Number.isFinite(detection.baseUnaidedRangeKm) || detection.baseUnaidedRangeKm < 0) errors.push('detection.baseUnaidedRangeKm must be a non-negative finite number');
+  else {
+    const fields = ['intelligenceFloor','intelligenceWeight','readinessFloor','readinessWeight','weatherFloor','weatherWeight','terrainFloor','terrainWeight','formationConfidenceThreshold','unitConfidenceThreshold'] as const;
+    for (const key of fields) if (!Number.isFinite(detection[key]) || detection[key] < 0 || detection[key] > 1) errors.push(`detection.${key} must be between 0 and 1`);
+    for (const sensorType of Object.keys(DEFAULT_DETECTION_POLICY.sensorRangeModifiers) as DetectionSensorType[]) if (!Number.isFinite(detection.sensorRangeModifiers[sensorType]) || detection.sensorRangeModifiers[sensorType] < 0) errors.push(`detection.sensorRangeModifiers.${sensorType} must be a non-negative finite number`);
+    if (detection.formationConfidenceThreshold < detection.unitConfidenceThreshold) errors.push('detection.formationConfidenceThreshold must not be below unitConfidenceThreshold');
   }
-
-  if (r.implemented && !r.resolveCombat) {
-    errors.push('implemented era ruleset requires resolveCombat');
-  }
-
+  if (r.implemented && !r.resolveCombat) errors.push('implemented era ruleset requires resolveCombat');
   return errors;
 }
