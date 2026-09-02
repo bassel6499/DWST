@@ -1,15 +1,316 @@
 import type { CombatUnitContext } from '../../core/combatContext';
 import type { UnitState } from '../../core/types';
-import { calculateForceCapability, calculateForceQuality, type WW2ForceCapability, type WW2ForceQuality } from './combatCapability';
-import { calculateGeometry, type WW2GeometryFactors, type WW2TerrainType } from './combatGeometry';
-import { calculateTargetInteraction, type WW2TargetInteraction } from './combatTargetInteraction';
-import { calculateCommandAndManeuver, calculateEffectiveness, calculateEffects, determineTacticalOutcome, resolveAttrition, type WW2CombatEffects, type WW2EffectivenessFactors } from './combatResolution';
+import {
+  calculateForceCapability,
+  calculateForceQuality,
+  type WW2ForceCapability,
+  type WW2ForceQuality,
+} from './combatCapability';
+import {
+  calculateGeometry,
+  type WW2GeometryFactors,
+  type WW2TerrainType,
+} from './combatGeometry';
+import {
+  calculateTargetInteraction,
+  type WW2TargetInteraction,
+} from './combatTargetInteraction';
+import {
+  calculateCommandAndManeuver,
+  calculateEffectiveness,
+  calculateEffects,
+  determineTacticalOutcome,
+  resolveAttrition,
+  type WW2CombatEffects,
+  type WW2EffectivenessFactors,
+} from './combatResolution';
+
 export { WW2_COMBAT_COEFFICIENTS } from './combatCoefficients';
-export type WW2CombatPhase = 'approach'|'positioning'|'preparation'|'main_engagement'|'assault'|'exploitation';
-export type WW2CombatOutcome = 'attacker_repulsed'|'attacker_stalls'|'local_gain'|'penetration'|'breakthrough'|'defender_withdraws';
-export interface WW2CombatInput{attacker:UnitState;defender:UnitState;terrainDefense:number;weather:number;surprise:number;distanceKm?:number;terrainType?:WW2TerrainType;lineOfSight?:number;targetExposure?:number;artillerySupport?:number;armorSupport?:number;antiArmor?:number;airSupport?:number;maneuver?:number;command?:number;attackerContext?:CombatUnitContext;defenderContext?:CombatUnitContext;}
-export interface WW2CombatResult{attackerLosses:number;defenderLosses:number;attackerEquipmentLosses:number;defenderEquipmentLosses:number;attackerAmmunitionDelta:number;defenderAmmunitionDelta:number;attackerFuelDelta:number;defenderFuelDelta:number;attackerReadinessDelta:number;defenderReadinessDelta:number;attackerMoraleDelta:number;defenderMoraleDelta:number;attackerSuppressionDelta:number;defenderSuppressionDelta:number;attackerDisorganizationDelta:number;defenderDisorganizationDelta:number;attackerEffectiveness:number;defenderEffectiveness:number;attackerAdvanceKm:number;defenderWithdrawalKm:number;defenderReserveCommitted:boolean;attackerReserveCommitted:boolean;outcome:WW2CombatOutcome;phase:WW2CombatPhase;factors:Record<string,number>;}
-function supportValues(input:WW2CombatInput,attacker:WW2ForceCapability,defender:WW2ForceCapability){return{artilleryA:Math.max(0,input.artillerySupport??attacker.artillery*0.75),artilleryB:Math.max(0,defender.artillery*0.75),armorA:Math.max(0,input.armorSupport??attacker.armor*0.60),armorB:Math.max(0,defender.armor*0.60),antiArmorA:Math.max(0,input.antiArmor??attacker.antiArmor*0.80),antiArmorB:Math.max(0,defender.antiArmor*0.80),airA:Math.max(0,input.airSupport??attacker.air*0.50),airB:Math.max(0,defender.air*0.50)};}
-function stageFactors(attackerQuality:WW2ForceQuality,defenderQuality:WW2ForceQuality,attacker:WW2ForceCapability,defender:WW2ForceCapability,support:ReturnType<typeof supportValues>,geometry:WW2GeometryFactors,target:WW2TargetInteraction,effectiveness:WW2EffectivenessFactors,effects:WW2CombatEffects,tactical:ReturnType<typeof determineTacticalOutcome>):Record<string,number>{return{attackerQuality:attackerQuality.quality,defenderQuality:defenderQuality.quality,ammoA:attackerQuality.ammunition,ammoB:defenderQuality.ammunition,sustainA:attackerQuality.sustainment,sustainB:defenderQuality.sustainment,wearA:attackerQuality.wear,wearB:defenderQuality.wear,fatigueA:attackerQuality.fatigue,fatigueB:defenderQuality.fatigue,attackerCapability:attacker.equipment,defenderCapability:defender.equipment,attackerArmorCapability:attacker.armor,defenderArmorCapability:defender.armor,attackerAntiArmorCapability:attacker.antiArmor,defenderAntiArmorCapability:defender.antiArmor,attackerArtilleryCapability:attacker.artillery,defenderArtilleryCapability:defender.artillery,attackerAirCapability:attacker.air,defenderAirCapability:defender.air,attackerInfantryCapability:attacker.infantry,defenderInfantryCapability:defender.infantry,artilleryA:support.artilleryA,artilleryB:support.artilleryB,armorA:support.armorA,armorB:support.armorB,antiArmorA:support.antiArmorA,antiArmorB:support.antiArmorB,airA:support.airA,airB:support.airB,targetArmorA:target.targetArmorA,targetArmorB:target.targetArmorB,armorTargetA:target.armorTargetA,armorTargetB:target.armorTargetB,artilleryTargetA:target.artilleryTargetA,artilleryTargetB:target.artilleryTargetB,directFireA:target.directFireA,directFireB:target.directFireB,terrain:effectiveness.terrain,weather:effectiveness.weather,surprise:effectiveness.surprise,exposureA:geometry.exposureA,exposureB:geometry.exposureB,lineOfSight:geometry.lineOfSight,distanceKm:geometry.distanceKm,rangeA:geometry.rangeA,rangeB:geometry.rangeB,frontA:geometry.frontA,frontB:geometry.frontB,engagedA:geometry.engagedA,engagedB:geometry.engagedB,densityA:geometry.densityA,densityB:geometry.densityB,densityRatioA:geometry.densityRatioA,densityRatioB:geometry.densityRatioB,maneuver:effectiveness.maneuver,command:effectiveness.command,reactionDelayHours:effectiveness.reactionDelayHours,attackerEquipment:effectiveness.attackerEquipment,defenderEquipment:effectiveness.defenderEquipment,attackerMobility:effectiveness.attackerMobility,defenderMobility:effectiveness.defenderMobility,attackerSuppression:effects.attackerSuppressionDelta,defenderSuppression:effects.defenderSuppressionDelta,attackerDisorganization:effects.attackerDisorganizationDelta,defenderDisorganization:effects.defenderDisorganizationDelta,alpha:effectiveness.alpha,beta:effectiveness.beta,offenseA:effectiveness.offenseA,offenseB:effectiveness.offenseB,localRatio:tactical.localRatio,lossRateA:effects.lossRateA,lossRateB:effects.lossRateB,attackerAdvanceKm:tactical.attackerAdvanceKm,defenderWithdrawalKm:tactical.defenderWithdrawalKm,defenderReserveCommitted:tactical.defenderReserveCommitted?1:0,attackerReserveCommitted:tactical.attackerReserveCommitted?1:0};}
-export function resolveWW2Combat(input:WW2CombatInput):WW2CombatResult{const attackerPersonnel=Math.max(0,Number.isFinite(input.attacker.personnel)?input.attacker.personnel:0),defenderPersonnel=Math.max(0,Number.isFinite(input.defender.personnel)?input.defender.personnel:0);if(attackerPersonnel<=0||defenderPersonnel<=0)return zeroCombatResult();const attackerQuality=calculateForceQuality(input.attacker),defenderQuality=calculateForceQuality(input.defender),attackerCapability=calculateForceCapability(input.attackerContext),defenderCapability=calculateForceCapability(input.defenderContext),support=supportValues(input,attackerCapability,defenderCapability),geometry=calculateGeometry(input,attackerCapability,defenderCapability),target=calculateTargetInteraction(input,attackerCapability,defenderCapability),commandAndManeuver=calculateCommandAndManeuver(input),effectiveness=calculateEffectiveness(input,attackerQuality,defenderQuality,attackerCapability,defenderCapability,target,geometry,commandAndManeuver),attrition=resolveAttrition(attackerPersonnel,defenderPersonnel,effectiveness.alpha,effectiveness.beta),effects=calculateEffects(input,attackerCapability,defenderCapability,effectiveness,attrition),tactical=determineTacticalOutcome(input,effectiveness,effects,geometry);return{attackerLosses:attrition.attackerLosses,defenderLosses:attrition.defenderLosses,attackerEquipmentLosses:effects.attackerEquipmentLosses,defenderEquipmentLosses:effects.defenderEquipmentLosses,attackerAmmunitionDelta:effects.attackerAmmunitionDelta,defenderAmmunitionDelta:effects.defenderAmmunitionDelta,attackerFuelDelta:effects.attackerFuelDelta,defenderFuelDelta:effects.defenderFuelDelta,attackerReadinessDelta:effects.attackerReadinessDelta,defenderReadinessDelta:effects.defenderReadinessDelta,attackerMoraleDelta:effects.attackerMoraleDelta,defenderMoraleDelta:effects.defenderMoraleDelta,attackerSuppressionDelta:effects.attackerSuppressionDelta,defenderSuppressionDelta:effects.defenderSuppressionDelta,attackerDisorganizationDelta:effects.attackerDisorganizationDelta,defenderDisorganizationDelta:effects.defenderDisorganizationDelta,attackerEffectiveness:effects.attackerEffectiveness,defenderEffectiveness:effects.defenderEffectiveness,attackerAdvanceKm:tactical.attackerAdvanceKm,defenderWithdrawalKm:tactical.defenderWithdrawalKm,defenderReserveCommitted:tactical.defenderReserveCommitted,attackerReserveCommitted:tactical.attackerReserveCommitted,outcome:tactical.outcome,phase:geometry.phase,factors:stageFactors(attackerQuality,defenderQuality,attackerCapability,defenderCapability,support,geometry,target,effectiveness,effects,tactical)};}
-function zeroCombatResult():WW2CombatResult{return{attackerLosses:0,defenderLosses:0,attackerEquipmentLosses:0,defenderEquipmentLosses:0,attackerAmmunitionDelta:0,defenderAmmunitionDelta:0,attackerFuelDelta:0,defenderFuelDelta:0,attackerReadinessDelta:0,defenderReadinessDelta:0,attackerMoraleDelta:0,defenderMoraleDelta:0,attackerSuppressionDelta:0,defenderSuppressionDelta:0,attackerDisorganizationDelta:0,defenderDisorganizationDelta:0,attackerEffectiveness:0,defenderEffectiveness:0,attackerAdvanceKm:0,defenderWithdrawalKm:0,defenderReserveCommitted:false,attackerReserveCommitted:false,outcome:'attacker_stalls',phase:'approach',factors:{}};}
+
+export type WW2CombatPhase =
+  | 'approach'
+  | 'positioning'
+  | 'preparation'
+  | 'main_engagement'
+  | 'assault'
+  | 'exploitation';
+export type WW2CombatOutcome =
+  | 'attacker_repulsed'
+  | 'attacker_stalls'
+  | 'local_gain'
+  | 'penetration'
+  | 'breakthrough'
+  | 'defender_withdraws';
+
+export interface WW2CombatInput {
+  attacker: UnitState;
+  defender: UnitState;
+  terrainDefense: number;
+  weather: number;
+  surprise: number;
+  distanceKm?: number;
+  terrainType?: WW2TerrainType;
+  lineOfSight?: number;
+  targetExposure?: number;
+  artillerySupport?: number;
+  armorSupport?: number;
+  antiArmor?: number;
+  airSupport?: number;
+  maneuver?: number;
+  command?: number;
+  attackerContext?: CombatUnitContext;
+  defenderContext?: CombatUnitContext;
+}
+
+export interface WW2CombatResult {
+  attackerLosses: number;
+  defenderLosses: number;
+  attackerEquipmentLosses: number;
+  defenderEquipmentLosses: number;
+  attackerAmmunitionDelta: number;
+  defenderAmmunitionDelta: number;
+  attackerFuelDelta: number;
+  defenderFuelDelta: number;
+  attackerReadinessDelta: number;
+  defenderReadinessDelta: number;
+  attackerMoraleDelta: number;
+  defenderMoraleDelta: number;
+  attackerSuppressionDelta: number;
+  defenderSuppressionDelta: number;
+  attackerDisorganizationDelta: number;
+  defenderDisorganizationDelta: number;
+  attackerEffectiveness: number;
+  defenderEffectiveness: number;
+  attackerAdvanceKm: number;
+  defenderWithdrawalKm: number;
+  defenderReserveCommitted: boolean;
+  attackerReserveCommitted: boolean;
+  outcome: WW2CombatOutcome;
+  phase: WW2CombatPhase;
+  factors: Record<string, number>;
+}
+
+function supportValues(
+  input: WW2CombatInput,
+  attacker: WW2ForceCapability,
+  defender: WW2ForceCapability,
+) {
+  return {
+    artilleryA: Math.max(0, input.artillerySupport ?? attacker.artillery * 0.75),
+    artilleryB: Math.max(0, defender.artillery * 0.75),
+    armorA: Math.max(0, input.armorSupport ?? attacker.armor * 0.60),
+    armorB: Math.max(0, defender.armor * 0.60),
+    antiArmorA: Math.max(0, input.antiArmor ?? attacker.antiArmor * 0.80),
+    antiArmorB: Math.max(0, defender.antiArmor * 0.80),
+    airA: Math.max(0, input.airSupport ?? attacker.air * 0.50),
+    airB: Math.max(0, defender.air * 0.50),
+  };
+}
+
+function stageFactors(
+  attackerQuality: WW2ForceQuality,
+  defenderQuality: WW2ForceQuality,
+  attacker: WW2ForceCapability,
+  defender: WW2ForceCapability,
+  support: ReturnType<typeof supportValues>,
+  geometry: WW2GeometryFactors,
+  target: WW2TargetInteraction,
+  effectiveness: WW2EffectivenessFactors,
+  effects: WW2CombatEffects,
+  tactical: ReturnType<typeof determineTacticalOutcome>,
+): Record<string, number> {
+  return {
+    attackerQuality: attackerQuality.quality,
+    defenderQuality: defenderQuality.quality,
+    ammoA: attackerQuality.ammunition,
+    ammoB: defenderQuality.ammunition,
+    sustainA: attackerQuality.sustainment,
+    sustainB: defenderQuality.sustainment,
+    wearA: attackerQuality.wear,
+    wearB: defenderQuality.wear,
+    fatigueA: attackerQuality.fatigue,
+    fatigueB: defenderQuality.fatigue,
+    attackerCapability: attacker.equipment,
+    defenderCapability: defender.equipment,
+    attackerArmorCapability: attacker.armor,
+    defenderArmorCapability: defender.armor,
+    attackerAntiArmorCapability: attacker.antiArmor,
+    defenderAntiArmorCapability: defender.antiArmor,
+    attackerArtilleryCapability: attacker.artillery,
+    defenderArtilleryCapability: defender.artillery,
+    attackerAirCapability: attacker.air,
+    defenderAirCapability: defender.air,
+    attackerInfantryCapability: attacker.infantry,
+    defenderInfantryCapability: defender.infantry,
+    artilleryA: support.artilleryA,
+    artilleryB: support.artilleryB,
+    armorA: support.armorA,
+    armorB: support.armorB,
+    antiArmorA: support.antiArmorA,
+    antiArmorB: support.antiArmorB,
+    airA: support.airA,
+    airB: support.airB,
+    targetArmorA: target.targetArmorA,
+    targetArmorB: target.targetArmorB,
+    armorTargetA: target.armorTargetA,
+    armorTargetB: target.armorTargetB,
+    artilleryTargetA: target.artilleryTargetA,
+    artilleryTargetB: target.artilleryTargetB,
+    directFireA: target.directFireA,
+    directFireB: target.directFireB,
+    terrain: effectiveness.terrain,
+    weather: effectiveness.weather,
+    surprise: effectiveness.surprise,
+    exposureA: geometry.exposureA,
+    exposureB: geometry.exposureB,
+    lineOfSight: geometry.lineOfSight,
+    distanceKm: geometry.distanceKm,
+    rangeA: geometry.rangeA,
+    rangeB: geometry.rangeB,
+    frontA: geometry.frontA,
+    frontB: geometry.frontB,
+    engagedA: geometry.engagedA,
+    engagedB: geometry.engagedB,
+    densityA: geometry.densityA,
+    densityB: geometry.densityB,
+    densityRatioA: geometry.densityRatioA,
+    densityRatioB: geometry.densityRatioB,
+    maneuver: effectiveness.maneuver,
+    command: effectiveness.command,
+    reactionDelayHours: effectiveness.reactionDelayHours,
+    attackerEquipment: effectiveness.attackerEquipment,
+    defenderEquipment: effectiveness.defenderEquipment,
+    attackerMobility: effectiveness.attackerMobility,
+    defenderMobility: effectiveness.defenderMobility,
+    attackerSuppression: effects.attackerSuppressionDelta,
+    defenderSuppression: effects.defenderSuppressionDelta,
+    attackerDisorganization: effects.attackerDisorganizationDelta,
+    defenderDisorganization: effects.defenderDisorganizationDelta,
+    alpha: effectiveness.alpha,
+    beta: effectiveness.beta,
+    offenseA: effectiveness.offenseA,
+    offenseB: effectiveness.offenseB,
+    localRatio: tactical.localRatio,
+    lossRateA: effects.lossRateA,
+    lossRateB: effects.lossRateB,
+    attackerAdvanceKm: tactical.attackerAdvanceKm,
+    defenderWithdrawalKm: tactical.defenderWithdrawalKm,
+    defenderReserveCommitted: tactical.defenderReserveCommitted ? 1 : 0,
+    attackerReserveCommitted: tactical.attackerReserveCommitted ? 1 : 0,
+  };
+}
+
+/** Public WW2 resolver; mathematical stages live in focused modules. */
+export function resolveWW2Combat(input: WW2CombatInput): WW2CombatResult {
+  const attackerPersonnel = Math.max(
+    0,
+    Number.isFinite(input.attacker.personnel) ? input.attacker.personnel : 0,
+  );
+  const defenderPersonnel = Math.max(
+    0,
+    Number.isFinite(input.defender.personnel) ? input.defender.personnel : 0,
+  );
+  if (attackerPersonnel <= 0 || defenderPersonnel <= 0) return zeroCombatResult();
+
+  const attackerQuality = calculateForceQuality(input.attacker);
+  const defenderQuality = calculateForceQuality(input.defender);
+  const attackerCapability = calculateForceCapability(input.attackerContext);
+  const defenderCapability = calculateForceCapability(input.defenderContext);
+  const support = supportValues(input, attackerCapability, defenderCapability);
+  const geometry = calculateGeometry(input, attackerCapability, defenderCapability);
+  const target = calculateTargetInteraction(input, attackerCapability, defenderCapability);
+  const commandAndManeuver = calculateCommandAndManeuver(input);
+  const effectiveness = calculateEffectiveness(
+    input,
+    attackerQuality,
+    defenderQuality,
+    attackerCapability,
+    defenderCapability,
+    target,
+    geometry,
+    commandAndManeuver,
+  );
+  const attrition = resolveAttrition(
+    attackerPersonnel,
+    defenderPersonnel,
+    effectiveness.alpha,
+    effectiveness.beta,
+  );
+  const effects = calculateEffects(
+    input,
+    attackerCapability,
+    defenderCapability,
+    effectiveness,
+    attrition,
+  );
+  const tactical = determineTacticalOutcome(input, effectiveness, effects, geometry);
+
+  return {
+    attackerLosses: attrition.attackerLosses,
+    defenderLosses: attrition.defenderLosses,
+    attackerEquipmentLosses: effects.attackerEquipmentLosses,
+    defenderEquipmentLosses: effects.defenderEquipmentLosses,
+    attackerAmmunitionDelta: effects.attackerAmmunitionDelta,
+    defenderAmmunitionDelta: effects.defenderAmmunitionDelta,
+    attackerFuelDelta: effects.attackerFuelDelta,
+    defenderFuelDelta: effects.defenderFuelDelta,
+    attackerReadinessDelta: effects.attackerReadinessDelta,
+    defenderReadinessDelta: effects.defenderReadinessDelta,
+    attackerMoraleDelta: effects.attackerMoraleDelta,
+    defenderMoraleDelta: effects.defenderMoraleDelta,
+    attackerSuppressionDelta: effects.attackerSuppressionDelta,
+    defenderSuppressionDelta: effects.defenderSuppressionDelta,
+    attackerDisorganizationDelta: effects.attackerDisorganizationDelta,
+    defenderDisorganizationDelta: effects.defenderDisorganizationDelta,
+    attackerEffectiveness: effects.attackerEffectiveness,
+    defenderEffectiveness: effects.defenderEffectiveness,
+    attackerAdvanceKm: tactical.attackerAdvanceKm,
+    defenderWithdrawalKm: tactical.defenderWithdrawalKm,
+    defenderReserveCommitted: tactical.defenderReserveCommitted,
+    attackerReserveCommitted: tactical.attackerReserveCommitted,
+    outcome: tactical.outcome,
+    phase: geometry.phase,
+    factors: stageFactors(
+      attackerQuality,
+      defenderQuality,
+      attackerCapability,
+      defenderCapability,
+      support,
+      geometry,
+      target,
+      effectiveness,
+      effects,
+      tactical,
+    ),
+  };
+}
+
+function zeroCombatResult(): WW2CombatResult {
+  return {
+    attackerLosses: 0,
+    defenderLosses: 0,
+    attackerEquipmentLosses: 0,
+    defenderEquipmentLosses: 0,
+    attackerAmmunitionDelta: 0,
+    defenderAmmunitionDelta: 0,
+    attackerFuelDelta: 0,
+    defenderFuelDelta: 0,
+    attackerReadinessDelta: 0,
+    defenderReadinessDelta: 0,
+    attackerMoraleDelta: 0,
+    defenderMoraleDelta: 0,
+    attackerSuppressionDelta: 0,
+    defenderSuppressionDelta: 0,
+    attackerDisorganizationDelta: 0,
+    defenderDisorganizationDelta: 0,
+    attackerEffectiveness: 0,
+    defenderEffectiveness: 0,
+    attackerAdvanceKm: 0,
+    defenderWithdrawalKm: 0,
+    defenderReserveCommitted: false,
+    attackerReserveCommitted: false,
+    outcome: 'attacker_stalls',
+    phase: 'approach',
+    factors: {},
+  };
+}
