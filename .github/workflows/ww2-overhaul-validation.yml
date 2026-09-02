@@ -9,6 +9,7 @@ on:
       - main
     paths:
       - 'src/dwst/**'
+      - 'scripts/check-dwst-maintainability.mjs'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - '.github/workflows/ww2-overhaul-validation.yml'
@@ -28,5 +29,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm type-check
+      - run: pnpm check:maintainability
       - run: pnpm test:unit --run
       - run: pnpm test:bench --run
