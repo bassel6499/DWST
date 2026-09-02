@@ -1,20 +1,11 @@
-import type { CombatUnitContext } from '../../core/combatContext';
-import type { UnitState } from '../../core/types';
 import {
   calculateForceCapability,
   calculateForceQuality,
   type WW2ForceCapability,
   type WW2ForceQuality,
 } from './combatCapability';
-import {
-  calculateGeometry,
-  type WW2GeometryFactors,
-  type WW2TerrainType,
-} from './combatGeometry';
-import {
-  calculateTargetInteraction,
-  type WW2TargetInteraction,
-} from './combatTargetInteraction';
+import { calculateGeometry, type WW2GeometryFactors } from './combatGeometry';
+import { calculateTargetInteraction, type WW2TargetInteraction } from './combatTargetInteraction';
 import {
   calculateCommandAndManeuver,
   calculateEffectiveness,
@@ -22,45 +13,22 @@ import {
   determineTacticalOutcome,
   resolveAttrition,
   type WW2CombatEffects,
-  type WW2EffectivenessFactors,
 } from './combatResolution';
+import type {
+  WW2CombatInput,
+  WW2CombatOutcome,
+  WW2CombatPhase,
+  WW2EffectivenessFactors,
+} from './combatTypes';
 
+export type {
+  WW2CombatInput,
+  WW2CombatOutcome,
+  WW2CombatPhase,
+  WW2EffectivenessFactors,
+} from './combatTypes';
+export type { WW2TerrainType } from './combatTypes';
 export { WW2_COMBAT_COEFFICIENTS } from './combatCoefficients';
-
-export type WW2CombatPhase =
-  | 'approach'
-  | 'positioning'
-  | 'preparation'
-  | 'main_engagement'
-  | 'assault'
-  | 'exploitation';
-export type WW2CombatOutcome =
-  | 'attacker_repulsed'
-  | 'attacker_stalls'
-  | 'local_gain'
-  | 'penetration'
-  | 'breakthrough'
-  | 'defender_withdraws';
-
-export interface WW2CombatInput {
-  attacker: UnitState;
-  defender: UnitState;
-  terrainDefense: number;
-  weather: number;
-  surprise: number;
-  distanceKm?: number;
-  terrainType?: WW2TerrainType;
-  lineOfSight?: number;
-  targetExposure?: number;
-  artillerySupport?: number;
-  armorSupport?: number;
-  antiArmor?: number;
-  airSupport?: number;
-  maneuver?: number;
-  command?: number;
-  attackerContext?: CombatUnitContext;
-  defenderContext?: CombatUnitContext;
-}
 
 export interface WW2CombatResult {
   attackerLosses: number;
@@ -90,11 +58,7 @@ export interface WW2CombatResult {
   factors: Record<string, number>;
 }
 
-function supportValues(
-  input: WW2CombatInput,
-  attacker: WW2ForceCapability,
-  defender: WW2ForceCapability,
-) {
+function supportValues(input: WW2CombatInput, attacker: WW2ForceCapability, defender: WW2ForceCapability) {
   return {
     artilleryA: Math.max(0, input.artillerySupport ?? attacker.artillery * 0.75),
     artilleryB: Math.max(0, defender.artillery * 0.75),
@@ -200,16 +164,10 @@ function stageFactors(
   };
 }
 
-/** Public WW2 resolver; mathematical stages live in focused modules. */
+/** Public WW2 resolver; the calculation stages remain independently testable. */
 export function resolveWW2Combat(input: WW2CombatInput): WW2CombatResult {
-  const attackerPersonnel = Math.max(
-    0,
-    Number.isFinite(input.attacker.personnel) ? input.attacker.personnel : 0,
-  );
-  const defenderPersonnel = Math.max(
-    0,
-    Number.isFinite(input.defender.personnel) ? input.defender.personnel : 0,
-  );
+  const attackerPersonnel = Math.max(0, Number.isFinite(input.attacker.personnel) ? input.attacker.personnel : 0);
+  const defenderPersonnel = Math.max(0, Number.isFinite(input.defender.personnel) ? input.defender.personnel : 0);
   if (attackerPersonnel <= 0 || defenderPersonnel <= 0) return zeroCombatResult();
 
   const attackerQuality = calculateForceQuality(input.attacker);
@@ -220,29 +178,9 @@ export function resolveWW2Combat(input: WW2CombatInput): WW2CombatResult {
   const geometry = calculateGeometry(input, attackerCapability, defenderCapability);
   const target = calculateTargetInteraction(input, attackerCapability, defenderCapability);
   const commandAndManeuver = calculateCommandAndManeuver(input);
-  const effectiveness = calculateEffectiveness(
-    input,
-    attackerQuality,
-    defenderQuality,
-    attackerCapability,
-    defenderCapability,
-    target,
-    geometry,
-    commandAndManeuver,
-  );
-  const attrition = resolveAttrition(
-    attackerPersonnel,
-    defenderPersonnel,
-    effectiveness.alpha,
-    effectiveness.beta,
-  );
-  const effects = calculateEffects(
-    input,
-    attackerCapability,
-    defenderCapability,
-    effectiveness,
-    attrition,
-  );
+  const effectiveness = calculateEffectiveness(input, attackerQuality, defenderQuality, attackerCapability, defenderCapability, target, geometry, commandAndManeuver);
+  const attrition = resolveAttrition(attackerPersonnel, defenderPersonnel, effectiveness.alpha, effectiveness.beta);
+  const effects = calculateEffects(input, attackerCapability, defenderCapability, effectiveness, attrition);
   const tactical = determineTacticalOutcome(input, effectiveness, effects, geometry);
 
   return {
@@ -270,47 +208,17 @@ export function resolveWW2Combat(input: WW2CombatInput): WW2CombatResult {
     attackerReserveCommitted: tactical.attackerReserveCommitted,
     outcome: tactical.outcome,
     phase: geometry.phase,
-    factors: stageFactors(
-      attackerQuality,
-      defenderQuality,
-      attackerCapability,
-      defenderCapability,
-      support,
-      geometry,
-      target,
-      effectiveness,
-      effects,
-      tactical,
-    ),
+    factors: stageFactors(attackerQuality, defenderQuality, attackerCapability, defenderCapability, support, geometry, target, effectiveness, effects, tactical),
   };
 }
 
 function zeroCombatResult(): WW2CombatResult {
   return {
-    attackerLosses: 0,
-    defenderLosses: 0,
-    attackerEquipmentLosses: 0,
-    defenderEquipmentLosses: 0,
-    attackerAmmunitionDelta: 0,
-    defenderAmmunitionDelta: 0,
-    attackerFuelDelta: 0,
-    defenderFuelDelta: 0,
-    attackerReadinessDelta: 0,
-    defenderReadinessDelta: 0,
-    attackerMoraleDelta: 0,
-    defenderMoraleDelta: 0,
-    attackerSuppressionDelta: 0,
-    defenderSuppressionDelta: 0,
-    attackerDisorganizationDelta: 0,
-    defenderDisorganizationDelta: 0,
-    attackerEffectiveness: 0,
-    defenderEffectiveness: 0,
-    attackerAdvanceKm: 0,
-    defenderWithdrawalKm: 0,
-    defenderReserveCommitted: false,
-    attackerReserveCommitted: false,
-    outcome: 'attacker_stalls',
-    phase: 'approach',
-    factors: {},
+    attackerLosses: 0, defenderLosses: 0, attackerEquipmentLosses: 0, defenderEquipmentLosses: 0,
+    attackerAmmunitionDelta: 0, defenderAmmunitionDelta: 0, attackerFuelDelta: 0, defenderFuelDelta: 0,
+    attackerReadinessDelta: 0, defenderReadinessDelta: 0, attackerMoraleDelta: 0, defenderMoraleDelta: 0,
+    attackerSuppressionDelta: 0, defenderSuppressionDelta: 0, attackerDisorganizationDelta: 0, defenderDisorganizationDelta: 0,
+    attackerEffectiveness: 0, defenderEffectiveness: 0, attackerAdvanceKm: 0, defenderWithdrawalKm: 0,
+    defenderReserveCommitted: false, attackerReserveCommitted: false, outcome: 'attacker_stalls', phase: 'approach', factors: {},
   };
 }
