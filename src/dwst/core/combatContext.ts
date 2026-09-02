@@ -4,6 +4,7 @@
  * itself does not contain era-specific combat rules.
  */
 export interface CombatUnitContext {
+  readonly personnel?: number;
   readonly equipmentOperational: number;
   readonly equipmentDamaged: number;
   readonly equipmentDestroyed: number;
@@ -12,6 +13,8 @@ export interface CombatUnitContext {
   readonly crewReady: number;
   readonly equipmentReady: number;
   readonly equipmentByType: Readonly<Record<string, number>>;
+  readonly equipmentByDefinition?: Readonly<Record<string, number>>;
+  readonly operationalEquipmentByDefinition?: Readonly<Record<string, number>>;
 }
 
 export interface CombatContext {
