@@ -2,12 +2,16 @@ import type { UnitState } from '../../core/types';
 import type { WW2ForceCapability, WW2ForceQuality } from './combatCapability';
 import type { WW2GeometryFactors } from './combatGeometry';
 import type { WW2TargetInteraction } from './combatTargetInteraction';
-import type { WW2CombatInput, WW2CombatOutcome, WW2CombatPhase } from './combat';
+import type { WW2CombatInput, WW2CombatPhase } from './combat';
 import { WW2_COMBAT_COEFFICIENTS as C } from './combatCoefficients';
+import { resolveAttrition, type WW2AttritionResult } from './combatAttrition';
+import { calculateEffects, type WW2CombatEffects } from './combatEffects';
+import { determineTacticalOutcome, type WW2TacticalResult } from './combatOutcome';
 
 const clamp = (v: number, min = 0, max = 1) => Math.max(min, Math.min(max, v));
-const positive = (v: number) => Math.max(0, Number.isFinite(v) ? v : 0);
-const ratio = (n: number, d: number, empty = 0) => d > 0 ? clamp(n / d) : empty;
+
+export type { WW2AttritionResult, WW2CombatEffects, WW2TacticalResult };
+export { resolveAttrition, calculateEffects, determineTacticalOutcome };
 
 export interface WW2EffectivenessFactors {
   readonly offenseA: number;
@@ -25,43 +29,6 @@ export interface WW2EffectivenessFactors {
   readonly attackerEquipment: number;
   readonly defenderEquipment: number;
   readonly reactionDelayHours: number;
-}
-
-export interface WW2AttritionResult {
-  readonly attackerRemaining: number;
-  readonly defenderRemaining: number;
-  readonly attackerLosses: number;
-  readonly defenderLosses: number;
-}
-
-export interface WW2CombatEffects {
-  readonly attackerEquipmentLosses: number;
-  readonly defenderEquipmentLosses: number;
-  readonly attackerAmmunitionDelta: number;
-  readonly defenderAmmunitionDelta: number;
-  readonly attackerFuelDelta: number;
-  readonly defenderFuelDelta: number;
-  readonly attackerReadinessDelta: number;
-  readonly defenderReadinessDelta: number;
-  readonly attackerMoraleDelta: number;
-  readonly defenderMoraleDelta: number;
-  readonly attackerSuppressionDelta: number;
-  readonly defenderSuppressionDelta: number;
-  readonly attackerDisorganizationDelta: number;
-  readonly defenderDisorganizationDelta: number;
-  readonly attackerEffectiveness: number;
-  readonly defenderEffectiveness: number;
-  readonly lossRateA: number;
-  readonly lossRateB: number;
-}
-
-export interface WW2TacticalResult {
-  readonly outcome: WW2CombatOutcome;
-  readonly localRatio: number;
-  readonly attackerAdvanceKm: number;
-  readonly defenderWithdrawalKm: number;
-  readonly defenderReserveCommitted: boolean;
-  readonly attackerReserveCommitted: boolean;
 }
 
 function posture(unit: UnitState, defender: boolean) {
@@ -87,11 +54,7 @@ export function calculateCommandAndManeuver(input: WW2CombatInput) {
       -0.5,
       0.5,
     ),
-    maneuver: clamp(
-      input.maneuver ?? attackerPosture - defenderPosture,
-      -0.5,
-      0.5,
-    ),
+    maneuver: clamp(input.maneuver ?? attackerPosture - defenderPosture, -0.5, 0.5),
   };
 }
 
@@ -104,15 +67,10 @@ function reserveFraction(unit: UnitState) {
 
 function phaseCommitment(phase: WW2CombatPhase, reserve: number) {
   const phaseFactor =
-    phase === 'approach' || phase === 'positioning'
-      ? C.approachCommitment
-      : phase === 'preparation'
-        ? C.preparationCommitment
-        : phase === 'main_engagement'
-          ? 0.80
-          : phase === 'assault'
-            ? C.assaultCommitment
-            : 0.95;
+    phase === 'approach' || phase === 'positioning' ? C.approachCommitment :
+    phase === 'preparation' ? C.preparationCommitment :
+    phase === 'main_engagement' ? 0.80 :
+    phase === 'assault' ? C.assaultCommitment : 0.95;
   return clamp(phaseFactor * (1 - reserve), 0.20, 1);
 }
 
@@ -131,11 +89,9 @@ export function calculateEffectiveness(
   const surprise = clamp(input.surprise, -0.5, 0.5);
   const attackerEquipment = attackerCapability.equipment;
   const defenderEquipment = defenderCapability.equipment;
-  const attackerCombatCapability =
-    attackerEquipment *
+  const attackerCombatCapability = attackerEquipment *
     (C.combatCapabilityBase + C.combatPowerWeight * clamp(input.attacker.combatPower));
-  const defenderCombatCapability =
-    defenderEquipment *
+  const defenderCombatCapability = defenderEquipment *
     (C.combatCapabilityBase + C.combatPowerWeight * clamp(input.defender.combatPower));
   const commitmentA = phaseCommitment(geometry.phase, reserveFraction(input.attacker));
   const commitmentB = phaseCommitment(geometry.phase, reserveFraction(input.defender));
@@ -143,29 +99,21 @@ export function calculateEffectiveness(
   const artilleryB = Math.max(0, defenderCapability.artillery * 0.75);
   const airA = Math.max(0, input.airSupport ?? attackerCapability.air * 0.50);
   const airB = Math.max(0, defenderCapability.air * 0.50);
-  const offenseA =
-    (0.68 + 0.32 * attackerQuality.quality) *
-    attackerQuality.ammunition * attackerQuality.sustainment *
-    attackerQuality.wear * attackerQuality.fatigue * attackerCombatCapability *
-    weather * geometry.rangeA * geometry.engagedA * geometry.densityRatioA *
-    commitmentA * geometry.lineOfSight;
-  const offenseB =
-    (0.68 + 0.32 * defenderQuality.quality) *
-    defenderQuality.ammunition * defenderQuality.sustainment *
-    defenderQuality.wear * defenderQuality.fatigue * defenderCombatCapability *
-    weather * geometry.rangeB * geometry.engagedB * geometry.densityRatioB *
-    commitmentB * geometry.lineOfSight;
-  const beta =
-    C.baseRate * offenseB * terrain * geometry.exposureB *
-    (1 + artilleryB * target.artilleryTargetB) * (1 + airB) *
-    target.targetArmorB * target.armorTargetB * target.infantryTargetB *
-    (1 - commandAndManeuver.maneuver * 0.45) *
+  const offenseA = (0.68 + 0.32 * attackerQuality.quality) * attackerQuality.ammunition *
+    attackerQuality.sustainment * attackerQuality.wear * attackerQuality.fatigue *
+    attackerCombatCapability * weather * geometry.rangeA * geometry.engagedA *
+    geometry.densityRatioA * commitmentA * geometry.lineOfSight;
+  const offenseB = (0.68 + 0.32 * defenderQuality.quality) * defenderQuality.ammunition *
+    defenderQuality.sustainment * defenderQuality.wear * defenderQuality.fatigue *
+    defenderCombatCapability * weather * geometry.rangeB * geometry.engagedB *
+    geometry.densityRatioB * commitmentB * geometry.lineOfSight;
+  const beta = C.baseRate * offenseB * terrain * geometry.exposureB *
+    (1 + artilleryB * target.artilleryTargetB) * (1 + airB) * target.targetArmorB *
+    target.armorTargetB * target.infantryTargetB * (1 - commandAndManeuver.maneuver * 0.45) *
     (1 - commandAndManeuver.command * 0.35) * (1 - surprise);
-  const alpha =
-    C.baseRate * offenseA * geometry.exposureA *
-    (1 + artilleryA * target.artilleryTargetA) * (1 + airA) *
-    target.targetArmorA * target.armorTargetA * target.directFireA *
-    (1 + commandAndManeuver.maneuver * 0.65) *
+  const alpha = C.baseRate * offenseA * geometry.exposureA *
+    (1 + artilleryA * target.artilleryTargetA) * (1 + airA) * target.targetArmorA *
+    target.armorTargetA * target.directFireA * (1 + commandAndManeuver.maneuver * 0.65) *
     (1 + commandAndManeuver.command * 0.45) * (1 + surprise);
   const attackerMobility = calculateMobility(input.attacker, attackerCapability);
   const defenderMobility = calculateMobility(input.defender, defenderCapability);
@@ -184,265 +132,7 @@ export function calculateEffectiveness(
 
 function calculateMobility(unit: UnitState, capability: WW2ForceCapability) {
   const fuelFactor = 0.35 + 0.65 * clamp(unit.fuel);
-  const derived =
-    (0.35 +
-      0.20 * clamp(unit.readiness) +
-      0.15 * capability.armor +
-      0.10 * capability.equipment +
-      0.20 * clamp(unit.commandQuality)) *
-    fuelFactor;
+  const derived = (0.35 + 0.20 * clamp(unit.readiness) + 0.15 * capability.armor +
+    0.10 * capability.equipment + 0.20 * clamp(unit.commandQuality)) * fuelFactor;
   return clamp(unit.mobility ?? derived);
-}
-
-/** 24-step RK4 resolution of the square-law attrition equations. */
-export function resolveAttrition(
-  attackerPersonnel: number,
-  defenderPersonnel: number,
-  alpha: number,
-  beta: number,
-): WW2AttritionResult {
-  const steps = 24;
-  const dt = 1 / steps;
-  let attackerRemaining = attackerPersonnel;
-  let defenderRemaining = defenderPersonnel;
-  const derivative = (a: number, b: number): [number, number] => [
-    -Math.min(a, beta * b * b / Math.max(a, 1)),
-    -Math.min(b, alpha * a * a / Math.max(b, 1)),
-  ];
-  for (let step = 0; step < steps && attackerRemaining > 0 && defenderRemaining > 0; step += 1) {
-    const [k1a, k1b] = derivative(attackerRemaining, defenderRemaining);
-    const [k2a, k2b] = derivative(
-      Math.max(0, attackerRemaining + k1a * dt / 2),
-      Math.max(0, defenderRemaining + k1b * dt / 2),
-    );
-    const [k3a, k3b] = derivative(
-      Math.max(0, attackerRemaining + k2a * dt / 2),
-      Math.max(0, defenderRemaining + k2b * dt / 2),
-    );
-    const [k4a, k4b] = derivative(
-      Math.max(0, attackerRemaining + k3a * dt),
-      Math.max(0, defenderRemaining + k3b * dt),
-    );
-    attackerRemaining = Math.max(
-      0,
-      attackerRemaining + (k1a + 2 * k2a + 2 * k3a + k4a) * dt / 6,
-    );
-    defenderRemaining = Math.max(
-      0,
-      defenderRemaining + (k1b + 2 * k2b + 2 * k3b + k4b) * dt / 6,
-    );
-  }
-  return {
-    attackerRemaining,
-    defenderRemaining,
-    attackerLosses: Math.min(
-      attackerPersonnel,
-      Math.max(0, Math.round(attackerPersonnel - attackerRemaining)),
-    ),
-    defenderLosses: Math.min(
-      defenderPersonnel,
-      Math.max(0, Math.round(defenderPersonnel - defenderRemaining)),
-    ),
-  };
-}
-
-export function calculateEffects(
-  input: WW2CombatInput,
-  capabilityA: WW2ForceCapability,
-  capabilityB: WW2ForceCapability,
-  effectiveness: WW2EffectivenessFactors,
-  attrition: WW2AttritionResult,
-): WW2CombatEffects {
-  const lossRateA = ratio(attrition.attackerLosses, positive(input.attacker.personnel));
-  const lossRateB = ratio(attrition.defenderLosses, positive(input.defender.personnel));
-  const attackerEquipmentLosses = Math.min(
-    input.attacker.equipment,
-    Math.round(
-      input.attacker.equipment *
-      (C.equipmentLossBase + C.equipmentLossPersonnelWeight * lossRateA) *
-      (C.equipmentLossCapabilityMin +
-        (1 - C.equipmentLossCapabilityMin) * effectiveness.attackerEquipment) *
-      (1 + capabilityA.armor * 0.48),
-    ),
-  );
-  const defenderEquipmentLosses = Math.min(
-    input.defender.equipment,
-    Math.round(
-      input.defender.equipment *
-      (C.equipmentLossBase + C.equipmentLossPersonnelWeight * lossRateB) *
-      (C.equipmentLossCapabilityMin +
-        (1 - C.equipmentLossCapabilityMin) * effectiveness.defenderEquipment) *
-      (1 + capabilityB.armor * 0.48),
-    ),
-  );
-  const fireA = clamp(
-    input.attacker.ammunition *
-    (0.20 + 0.45 * capabilityA.artillery + 0.25 * capabilityA.air + 0.10 * capabilityA.armor),
-  );
-  const fireB = clamp(
-    input.defender.ammunition *
-    (0.20 + 0.45 * capabilityB.artillery + 0.25 * capabilityB.air + 0.10 * capabilityB.armor),
-  );
-  const intensityA = clamp(
-    input.attacker.ammunition *
-    (0.25 + 0.45 * lossRateA + 0.15 * capabilityA.artillery +
-      0.10 * capabilityA.air + 0.10 * Math.abs(effectiveness.maneuver)),
-  );
-  const intensityB = clamp(
-    input.defender.ammunition *
-    (0.25 + 0.45 * lossRateB + 0.15 * capabilityB.artillery + 0.10 * capabilityB.air),
-  );
-  const attackerSuppressionDelta = clamp(
-    C.suppressionBase + C.suppressionFireWeight * fireB +
-    C.suppressionLossWeight * lossRateB +
-    C.suppressionArtilleryWeight * capabilityB.artillery +
-    0.05 * Math.max(-effectiveness.surprise, 0),
-  );
-  const defenderSuppressionDelta = clamp(
-    C.suppressionBase + C.suppressionFireWeight * fireA +
-    C.suppressionLossWeight * lossRateA +
-    C.suppressionArtilleryWeight * capabilityA.artillery +
-    0.05 * Math.max(effectiveness.surprise, 0),
-  );
-  const attackerDisorganizationDelta = clamp(
-    C.disorganizationBase +
-    C.disorganizationSuppressionWeight * attackerSuppressionDelta +
-    C.disorganizationLossWeight * lossRateA +
-    C.disorganizationCommandWeight * Math.max(-effectiveness.command, 0),
-  );
-  const defenderDisorganizationDelta = clamp(
-    C.disorganizationBase +
-    C.disorganizationSuppressionWeight * defenderSuppressionDelta +
-    C.disorganizationLossWeight * lossRateB +
-    C.disorganizationCommandWeight * Math.max(effectiveness.command, 0),
-  );
-  return {
-    attackerEquipmentLosses, defenderEquipmentLosses,
-    attackerAmmunitionDelta: -Math.min(
-      input.attacker.ammunition,
-      C.ammunitionBaseUse + C.ammunitionIntensityWeight * intensityA +
-        C.ammunitionArtilleryWeight * capabilityA.artillery +
-        C.ammunitionAirWeight * capabilityA.air,
-    ),
-    defenderAmmunitionDelta: -Math.min(
-      input.defender.ammunition,
-      C.ammunitionBaseUse + C.ammunitionIntensityWeight * intensityB +
-        C.ammunitionArtilleryWeight * capabilityB.artillery +
-        C.ammunitionAirWeight * capabilityB.air,
-    ),
-    attackerFuelDelta: -Math.min(
-      input.attacker.fuel,
-      C.fuelBaseUse + C.fuelIntensityWeight * intensityA +
-        C.fuelArmorWeight * capabilityA.armor +
-        C.fuelManeuverWeight * Math.max(effectiveness.maneuver, 0),
-    ),
-    defenderFuelDelta: -Math.min(
-      input.defender.fuel,
-      C.fuelBaseUse + C.fuelIntensityWeight * intensityB +
-        C.fuelArmorWeight * capabilityB.armor,
-    ),
-    attackerReadinessDelta: -clamp(
-      C.readinessBaseLoss + C.readinessPersonnelLossWeight * lossRateA +
-        C.readinessIntensityWeight * intensityA +
-        C.readinessSuppressionWeight * attackerSuppressionDelta,
-      0,
-      0.30,
-    ),
-    defenderReadinessDelta: -clamp(
-      C.readinessBaseLoss + C.readinessPersonnelLossWeight * lossRateB +
-        C.readinessIntensityWeight * intensityB +
-        C.readinessSuppressionWeight * defenderSuppressionDelta,
-      0,
-      0.30,
-    ),
-    attackerMoraleDelta: -clamp(
-      C.moraleBaseLoss + C.moralePersonnelLossWeight * lossRateA +
-        C.moraleIntensityWeight * intensityA +
-        C.moraleSurpriseWeight * Math.max(-effectiveness.surprise, 0),
-      0,
-      0.25,
-    ),
-    defenderMoraleDelta: -clamp(
-      C.moraleBaseLoss + C.moralePersonnelLossWeight * lossRateB +
-        C.moraleIntensityWeight * intensityB +
-        C.moraleSurpriseWeight * Math.max(effectiveness.surprise, 0),
-      0,
-      0.25,
-    ),
-    attackerSuppressionDelta,
-    defenderSuppressionDelta,
-    attackerDisorganizationDelta,
-    defenderDisorganizationDelta,
-    attackerEffectiveness:
-      1 - Math.exp(
-        -effectiveness.alpha * positive(input.attacker.personnel) ** 2 /
-          Math.max(positive(input.defender.personnel), 1),
-      ),
-    defenderEffectiveness:
-      1 - Math.exp(
-        -effectiveness.beta * positive(input.defender.personnel) ** 2 /
-          Math.max(positive(input.attacker.personnel), 1),
-      ),
-    lossRateA,
-    lossRateB,
-  };
-}
-
-export function determineTacticalOutcome(
-  input: WW2CombatInput,
-  effectiveness: WW2EffectivenessFactors,
-  effects: WW2CombatEffects,
-  _geometry: WW2GeometryFactors,
-): WW2TacticalResult {
-  const attackerScore =
-    effectiveness.alpha * positive(input.attacker.personnel) *
-    (1 - effects.attackerSuppressionDelta) *
-    (1 - effects.attackerDisorganizationDelta) *
-    (0.65 + 0.35 * effectiveness.attackerMobility);
-  const defenderScore =
-    effectiveness.beta * positive(input.defender.personnel) *
-    (1 - effects.defenderSuppressionDelta) *
-    (1 - effects.defenderDisorganizationDelta) *
-    (0.65 + 0.35 * effectiveness.defenderMobility) *
-    effectiveness.terrain;
-  const localRatio = attackerScore / Math.max(defenderScore, 1e-9);
-  const attackerCanExploit =
-    effectiveness.attackerMobility > effectiveness.defenderMobility + C.outcomeExploitMobilityGap &&
-    effectiveness.maneuver > -0.05 && effectiveness.command > -0.20;
-  const defenderReserve = reserveFraction(input.defender);
-  const attackerReserve = reserveFraction(input.attacker);
-  const defenderResponse = clamp(0.50 + 0.50 * input.defender.commandQuality);
-  let outcome: WW2CombatOutcome = 'local_gain';
-  if (input.defender.order?.type === 'withdraw' || effects.defenderDisorganizationDelta >= C.outcomeWithdrawalDisorganization) {
-    outcome = 'defender_withdraws';
-  } else if (localRatio < C.outcomeRepulsed) {
-    outcome = 'attacker_repulsed';
-  } else if (localRatio < C.outcomeStall) {
-    outcome = 'attacker_stalls';
-  } else if (attackerCanExploit && localRatio >= C.outcomeBreakthrough && effects.defenderDisorganizationDelta >= C.outcomeBreakthroughDisorganization) {
-    outcome = 'breakthrough';
-  } else if (attackerCanExploit && localRatio >= C.outcomePenetration && effects.defenderDisorganizationDelta >= C.outcomePenetrationDisorganization) {
-    outcome = 'penetration';
-  }
-  const isBreakIn = outcome === 'penetration' || outcome === 'breakthrough';
-  const defenderReserveCommitted = isBreakIn && defenderReserve > 0.05 && defenderResponse >= 0.70 && effectiveness.reactionDelayHours < 6;
-  const attackerReserveCommitted = isBreakIn && attackerReserve > 0.05;
-  if (defenderReserveCommitted && outcome === 'penetration' && effectiveness.defenderMobility >= effectiveness.attackerMobility) {
-    outcome = 'attacker_stalls';
-  }
-  const attackerAdvanceKm =
-    outcome === 'breakthrough' ? C.movementBreakthroughKm :
-    outcome === 'penetration' ? C.movementPenetrationKm :
-    outcome === 'local_gain' ? C.movementLocalGainKm : 0;
-  const defenderWithdrawalKm =
-    outcome === 'defender_withdraws' ? C.movementWithdrawalKm :
-    outcome === 'breakthrough' ? C.movementCounterattackKm : 0;
-  return {
-    outcome,
-    localRatio,
-    attackerAdvanceKm,
-    defenderWithdrawalKm,
-    defenderReserveCommitted,
-    attackerReserveCommitted,
-  };
 }
