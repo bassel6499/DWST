@@ -233,8 +233,9 @@ export function resolveWW2Combat(i: WW2CombatInput): WW2CombatResult {
     defenderReadinessDelta: readinessB,
     attackerMoraleDelta: moraleA,
     defenderMoraleDelta: moraleB,
-    attackerEffectiveness: 1 - Math.exp(-beta * B0 * B0 / Math.max(A0, 1)),
-    defenderEffectiveness: 1 - Math.exp(-alpha * A0 * A0 / Math.max(B0, 1)),
+    // Effectiveness is the side's own offensive effectiveness against its opponent.
+    attackerEffectiveness: 1 - Math.exp(-alpha * A0 * A0 / Math.max(B0, 1)),
+    defenderEffectiveness: 1 - Math.exp(-beta * B0 * B0 / Math.max(A0, 1)),
     factors: {
       attackerQuality: aq,
       defenderQuality: dq,
