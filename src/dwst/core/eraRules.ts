@@ -66,6 +66,12 @@ export interface CombatResult {
   defenderReadinessDelta: number;
   attackerMoraleDelta: number;
   defenderMoraleDelta: number;
+  attackerSuppressionDelta: number;
+  defenderSuppressionDelta: number;
+  attackerDisorganizationDelta: number;
+  defenderDisorganizationDelta: number;
+  outcome: string;
+  phase: string;
 }
 
 export type CombatResolver = (input: {
@@ -73,6 +79,7 @@ export type CombatResolver = (input: {
   defender: UnitState;
   state: ScenarioState;
   surprise: number;
+  distanceKm?: number;
   context?: CombatContext;
 }) => CombatResult;
 
@@ -145,19 +152,14 @@ const DEFAULT_UNIT_ASSESSMENT: Readonly<UnitAssessmentPolicy> = deepFreeze({
 
 const scaffoldNotes = ['Ruleset scaffold only; not runnable until its era-specific mechanics are implemented and validated.'];
 
-const ww2Combat: CombatResolver = ({ attacker, defender, state, surprise, context }) => {
+const ww2Combat: CombatResolver = ({ attacker, defender, state, surprise, distanceKm, context }) => {
   const result = resolveWW2Combat({
     attacker,
     defender,
     terrainDefense: state.terrain,
     weather: state.weather,
     surprise,
-    artillerySupport: 0,
-    armorSupport: 0,
-    antiArmor: 0,
-    airSupport: 0,
-    maneuver: 0,
-    command: 0,
+    distanceKm,
     attackerContext: context?.attacker,
     defenderContext: context?.defender,
   });
@@ -174,6 +176,12 @@ const ww2Combat: CombatResolver = ({ attacker, defender, state, surprise, contex
     defenderReadinessDelta: result.defenderReadinessDelta,
     attackerMoraleDelta: result.attackerMoraleDelta,
     defenderMoraleDelta: result.defenderMoraleDelta,
+    attackerSuppressionDelta: result.attackerSuppressionDelta,
+    defenderSuppressionDelta: result.defenderSuppressionDelta,
+    attackerDisorganizationDelta: result.attackerDisorganizationDelta,
+    defenderDisorganizationDelta: result.defenderDisorganizationDelta,
+    outcome: result.outcome,
+    phase: result.phase,
   };
 };
 
@@ -201,7 +209,7 @@ export const ERA_RULESETS: Readonly<Record<EraId, EraRuleset>> = deepFreeze({
   industrial: base('industrial', 'Industrial', 'square', 6),
   ww1: base('ww1', 'World War I', 'square', 6),
   interwar: base('interwar', 'Interwar', 'square', 6),
-  ww2: { ...base('ww2', 'World War II', 'square', 6), implemented: true, resolveCombat: ww2Combat, notes: ['First runnable DWST ruleset. Combined arms, operational maneuver and high-tempo logistics.'] },
+  ww2: { ...base('ww2', 'World War II', 'square', 6), implemented: true, resolveCombat: ww2Combat, notes: ['First runnable DWST ruleset. Combined arms, spatial engagement, suppression, tactical outcomes and operational maneuver.'] },
   'early-cold-war': base('early-cold-war', 'Early Cold War', 'square', 3),
   'late-cold-war': base('late-cold-war', 'Late Cold War', 'square', 3),
   'post-cold-war': base('post-cold-war', 'Post-Cold War', 'contemporary-hybrid', 3),
