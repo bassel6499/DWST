@@ -218,6 +218,51 @@ B25 — Plan/repository synchronization audit: **CLOSED / PASS.** Completed the 
 
 B26 — Phase-2 completion gate: **CLOSED / PASS.** Completed the final Phase-2 acceptance cross-check against the S01-S31 and B01-B25 record and the current audit-branch implementation. The mandatory CI evidence is green: Audit Type Check run 33493383743 validated audit-branch commit 692d169de24abbf96d2067f27cbc3c8567382326 and passed dependency installation, type-check, the full unit suite, and the benchmark suite. The B22 full-system validation run 33465084000 is green; replay/provenance, explicit resource-delta accounting, canonical commit/projection, deterministic execution, and history/accounting coverage are established by the closed S-series and B-series findings. No outstanding mandatory Phase-2 acceptance criterion or technical blocker was identified in the final cross-check. The `workflow_dispatch` addition was a CI-only validation affordance on the audit branch and did not alter DWST runtime architecture or merge anything into `main`. Phase 2 is therefore complete on the audit branch. Future `main` integration remains a separate controlled operation requiring its own reconciliation and full CI validation; this B26 closure does not authorize or perform that merge.
 
+### Post-Phase-2 main integration and local system validation — 2026-09-03
+
+**Status: VERIFIED / POST-MERGE BASELINE RECORDED.**
+
+The audited canonical Phase-2 DWST state has already been integrated into `main`. Current `main` HEAD is `3985b131ac69fd137b268f1a3f7662599843b123`, whose commit message is **"Integrate audited canonical Phase-2 DWST state into main"**. The `main` tree contains the audited DWST canonical implementation and associated documentation/tests. This entry records post-merge verification only; it does not reopen the merge decision or authorize another merge.
+
+The audit branch `audit/canonical-state-refactor` currently points to `60b7f24287a2b1bec3559c331c2a22bb3f2e8e57`. It remains a divergent historical/refactor branch: compared directly with current `main`, it is **480 commits ahead and 17 commits behind**, with merge base `9f79c86f9f5c20fd586b2592fe42a9c2e0c2fcf1`. This divergence is not treated as evidence that the already-completed main integration must be repeated. The current main integration is the authoritative post-merge baseline for subsequent work.
+
+#### Local Windows system test
+
+A fresh local checkout of current `main` was prepared and tested on the user's Windows 10 laptop. The environment was aligned to the project's supported toolchain: Node.js `22.12.0`, npm `10.9.0`, and pnpm `10.26.2`. Dependencies were installed successfully with `pnpm install`, and the Vite development server started successfully with `pnpm run dev` at `http://localhost:5173/`.
+
+The `/dwst` route was then exercised directly. The current UI successfully loaded the DWST Ardennes operational prototype and demonstrated:
+
+- DWST route/bootstrap loading successfully.
+- Formation selection and natural-language order entry.
+- Order interpretation for move/attack/defend commands.
+- Objective resolution when the objective exists in the loaded demo fixture.
+- Turn resolution at different manually selected turn lengths.
+- Geographic movement/state progression.
+- Combat event generation during resolved turns.
+- Fuel and fatigue changes across turns.
+- Persistent order/SITREP history.
+
+The observed `/dwst` interface is a deliberately small demonstration fixture rather than the finished detailed Ardennes battlefield presentation. In particular, the demo UI does not expose the full casualty/resource detail or live map playback expected of the eventual presentation layer. This test therefore validates the current integrated DWST runtime/demo path, not completion of the detailed Ardennes visualization work. The detailed Ardennes scenario overhaul remains separate from this main-branch verification.
+
+#### Full local test suite
+
+The complete local command `pnpm test` was executed against current `main`.
+
+Result:
+
+- **1,761 tests passed**
+- **5 tests skipped**
+- **1 test suite failed** (`src/router/index.test.ts`)
+- The failure occurs during module loading before the router assertions execute.
+- The reported error is an invalid asset/file URL conversion involving `file:///images/orbat-chart-demo-min.png`.
+- Running the failing suite in isolation reproduced the same import-time failure and reported **no tests executed** in that suite.
+
+Direct repository inspection established that the exact `orbat-chart-demo-min.png` path is not present in the indexed current source, while the router statically imports the landing page and most other route components are lazy-loaded. The likely cause is therefore an unrelated test-time asset/import resolution issue in the landing-page dependency graph, but it is **not yet fixed or declared conclusively resolved**. The failure is recorded and intentionally deferred rather than mixed into the post-merge DWST validation.
+
+**Disposition:** the local system test establishes that the integrated `main` build is runnable and that the DWST demo path executes meaningful simulation behavior. The single router-suite failure remains a known deferred tooling/import issue. No source fix was made for it during this validation, and no plan item is reopened because of it.
+
+**Evidence boundary:** this is local verification on the current `main` checkout, not a claim that the full repository CI is green at this exact post-merge commit. Existing CI evidence recorded above remains tied to the commits/runs explicitly named in the plan.
+
 ## Deferred findings / later hardening
 
 Findings discovered during audits that are not prerequisites for the active task must be recorded here and addressed later in dependency order. They must not be silently mixed into unrelated fixes.
