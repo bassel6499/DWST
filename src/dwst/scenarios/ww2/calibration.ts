@@ -1,30 +1,33 @@
-import { resolveWW2Combat, type WW2CombatInput } from './combat';
+import { resolveWW2Combat, type WW2CombatInput, type WW2CombatResult } from './combat';
 
 export interface WW2CalibrationCase {
   readonly id: string;
-  readonly input: WW2CombatInput;
-  readonly assertions: readonly ((baseline: ReturnType<typeof resolveWW2Combat>, current: ReturnType<typeof resolveWW2Combat>) => boolean)[];
+  readonly baseline: WW2CombatInput;
+  readonly variant: WW2CombatInput;
+  readonly assertions: readonly ((baseline: WW2CombatResult, variant: WW2CombatResult) => boolean)[];
 }
 
 export interface WW2CalibrationResult {
   readonly id: string;
   readonly passed: boolean;
-  readonly result: ReturnType<typeof resolveWW2Combat>;
+  readonly baseline: WW2CombatResult;
+  readonly variant: WW2CombatResult;
 }
 
 /**
- * Deterministic calibration harness. It deliberately expresses qualitative
- * invariants rather than inventing historical coefficient values. Historical
- * benchmark data can be supplied later without changing the resolver contract.
+ * Deterministic calibration harness. It expresses qualitative invariants
+ * rather than inventing historical coefficient values. Historical benchmark
+ * data can be supplied later without changing the resolver contract.
  */
 export function evaluateWW2Calibration(cases: readonly WW2CalibrationCase[]): WW2CalibrationResult[] {
   return cases.map((testCase) => {
-    const baseline = resolveWW2Combat(testCase.input);
-    const current = resolveWW2Combat(testCase.input);
+    const baseline = resolveWW2Combat(testCase.baseline);
+    const variant = resolveWW2Combat(testCase.variant);
     return {
       id: testCase.id,
-      passed: testCase.assertions.every((assertion) => assertion(baseline, current)) && JSON.stringify(baseline) === JSON.stringify(current),
-      result: current,
+      passed: testCase.assertions.every((assertion) => assertion(baseline, variant)) && JSON.stringify(variant) === JSON.stringify(resolveWW2Combat(testCase.variant)),
+      baseline,
+      variant,
     };
   });
 }
