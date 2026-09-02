@@ -1,6 +1,16 @@
 import type { CombatUnitContext } from '../../core/combatContext';
 import type { UnitState } from '../../core/types';
 
+export type WW2TerrainType =
+  | 'open'
+  | 'rolling'
+  | 'forest'
+  | 'urban'
+  | 'ridge'
+  | 'valley'
+  | 'river'
+  | 'marsh'
+  | 'fortified';
 export type WW2CombatPhase =
   | 'approach'
   | 'positioning'
@@ -8,7 +18,6 @@ export type WW2CombatPhase =
   | 'main_engagement'
   | 'assault'
   | 'exploitation';
-
 export type WW2CombatOutcome =
   | 'attacker_repulsed'
   | 'attacker_stalls'
@@ -24,7 +33,7 @@ export interface WW2CombatInput {
   weather: number;
   surprise: number;
   distanceKm?: number;
-  terrainType?: import('./combatGeometry').WW2TerrainType;
+  terrainType?: WW2TerrainType;
   lineOfSight?: number;
   targetExposure?: number;
   artillerySupport?: number;
