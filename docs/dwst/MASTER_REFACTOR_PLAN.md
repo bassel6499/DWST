@@ -218,11 +218,100 @@ B25 — Plan/repository synchronization audit: **CLOSED / PASS.** Completed the 
 
 B26 — Phase-2 completion gate: **CLOSED / PASS.** Completed the final Phase-2 acceptance cross-check against the S01-S31 and B01-B25 record and the current audit-branch implementation. The mandatory CI evidence is green: Audit Type Check run 33493383743 validated audit-branch commit 692d169de24abbf96d2067f27cbc3c8567382326 and passed dependency installation, type-check, the full unit suite, and the benchmark suite. The B22 full-system validation run 33465084000 is green; replay/provenance, explicit resource-delta accounting, canonical commit/projection, deterministic execution, and history/accounting coverage are established by the closed S-series and B-series findings. No outstanding mandatory Phase-2 acceptance criterion or technical blocker was identified in the final cross-check. The `workflow_dispatch` addition was a CI-only validation affordance on the audit branch and did not alter DWST runtime architecture or merge anything into `main`. Phase 2 is therefore complete on the audit branch. Future `main` integration remains a separate controlled operation requiring its own reconciliation and full CI validation; this B26 closure does not authorize or perform that merge.
 
+## Wave 3 — WW2 combat-model refinement and maintainability
+
+**Status: IMPLEMENTED / VALIDATED GREEN on the audit work branch.** Wave 3 was authorized as one coherent implementation pass after the W3-00 maintainability-first design review. The current branch head is `be5be5414d08b6206d1de1c8f5a5ed5ba43ea958`; main remains untouched and PR #4 remains unmerged.
+
+### W3-00 — Maintainability and mathematical decomposition
+
+**CLOSED / PASS.** The WW2 combat resolver was decomposed into named stages rather than retaining one monolithic calculation chain. The public `resolveWW2Combat()` boundary remains stable while capability, geometry, target interaction, effectiveness, attrition, effects, and tactical outcome calculations are isolated into focused modules. Stage outputs remain inspectable through the result factors. CI run 33622935361 validated the earlier W3-00 decomposition with type-check, 1,778 passing tests, and benchmark execution.
+
+### W3-01 — Coefficient governance
+
+**CLOSED / PASS.** WW2 model coefficients remain centralized in `combatCoefficients.ts` and are consumed by the calculation stages rather than being scattered through generic Core. The maintainability CI gate verifies the coefficient registry remains present and the combat stages remain bounded in size. No historical coefficient was invented during this wave.
+
+### W3-02 — Capability model 2.0
+
+**CLOSED / PASS.** Added a dedicated capability projection stage converting canonical equipment/crew context into WW2-specific armor, anti-armor, artillery, air, infantry, and overall equipment capability. Human condition and equipment capability are kept separate. Suppression/disorganization and ammunition are now persistent causal inputs rather than report-only outputs.
+
+### W3-03 — Target interaction model
+
+**CLOSED / PASS.** Added explicit target-dependent interactions for armor, anti-armor, artillery, infantry, and direct-fire exposure. Anti-armor capability is weighted differently when the target is armored; armor and artillery effects differ against armored and unarmored target compositions. The implementation intentionally remains category-level until real weapon/target data exists; no fabricated historical weapon database was introduced.
+
+### W3-04 — Geometry, terrain, range, and exposure
+
+**CLOSED / PASS.** Added explicit engagement distance, frontage, force density, engaged fractions, line-of-sight, terrain class, target exposure, and range factors. WW2 terrain classes include open, rolling, forest, urban, ridge, valley, river, marsh, and fortified. Tactical position displacement uses explicit great-circle bearing/distance primitives; no invented coordinate conversion was introduced.
+
+### W3-05 — True combat phases
+
+**CLOSED / PASS.** Combat phase is now an explicit causal stage with `approach`, `positioning`, `preparation`, `main_engagement`, and `assault` phases, with phase-dependent force commitment. The phase is no longer only a descriptive label. The `exploitation` state remains available for later multi-turn maneuver-state expansion rather than being falsely claimed as a completed single-engagement phase.
+
+### W3-06 — Suppression and disorganization maturation
+
+**CLOSED / PASS.** Suppression and disorganization remain distinct persistent condition variables. Fire intensity contributes to suppression; suppression and losses contribute to disorganization; both reduce subsequent combat quality; deterministic inter-turn recovery is preserved in Core. Regression coverage verifies that pre-existing suppression/disorganization reduce subsequent combat effectiveness.
+
+### W3-07 — Tactical outcome to canonical state consequence
+
+**CLOSED / PASS.** Tactical results now carry bounded advance/withdrawal consequences and reserve-commitment decisions through the generic combat result/application boundary. Canonical combat-state application commits the geographic movement using geodesic primitives without mutating inputs. Regression coverage verifies tactical position changes and canonical state persistence.
+
+### W3-08 — Reserves, counterattack, and exploitation
+
+**CLOSED / PASS WITH LIMITED SCOPE.** Reserve fraction and reserve order now reduce immediate commitment; deterministic command/reaction capacity governs whether a defending reserve can respond to a penetration/breakthrough; committed reserves transition to explicit reserve states. Breakthrough/penetration generate stateful movement consequences. A full multi-unit reserve formation state machine and multi-turn exploitation chain remain a later refinement because the current single-engagement data model cannot honestly represent a complete rear-area reserve battle without additional scenario/OOB structures.
+
+### W3-09 — Command, reaction, and friction
+
+**CLOSED / PASS.** Command quality now contributes to maneuver/coordination, deterministic reaction delay, and reserve response eligibility rather than functioning only as a firepower multiplier. The model remains deterministic; no random friction was introduced without a validated RNG requirement.
+
+### W3-10 — Resource/sustainment causality
+
+**CLOSED / PASS.** Ammunition is now a true firing-capacity input: zero ammunition removes the ammunition component of firepower. Ammunition expenditure is explicitly bounded and committed through canonical resource deltas. Fuel availability now constrains mobility, while fuel expenditure remains an explicit combat resource delta. This preserves B11's canonical-authority boundary and does not create a parallel resource engine.
+
+### W3-11 — Historical calibration framework
+
+**CLOSED / FRAMEWORK READY; HISTORICAL DATA DEFERRED.** Extended the calibration layer with explicit historical observations and an error-comparison boundary for personnel/equipment loss rates and advance metrics. No fake historical observations or tuned coefficients were embedded. A real benchmark dataset remains required before claiming historical calibration accuracy.
+
+### W3-12 — Validation 2.0
+
+**CLOSED / PASS FOR CURRENT IMPLEMENTATION.** Added causal sensitivity/regression coverage for ammunition, fuel, suppression/disorganization, terrain classes, phase transitions, command response, determinism, and tactical geographic consequences. The full unit suite passed at 1,786 tests with 5 skipped in validation run 33655775729; WW2 combat and validation suites passed. Existing benchmark output still reports a non-fatal `NaNx` comparative label for the 20-turn benchmark; this is a benchmark-reporting cleanup item, not a simulation failure, and remains recorded for later hardening.
+
+### W3-13 — Maintainability CI gate
+
+**CLOSED / PASS.** Added `check:maintainability`, covering the WW2 combat stage file-size boundaries, rejection of untyped `as any` in those stages, and verification that the coefficient registry remains centralized. The validation workflow now runs type-check, maintainability, full unit tests, and benchmark tests. Validation run 33655775729 passed every workflow step.
+
+### Wave-3 acceptance gate
+
+- Core/WW2 separation preserved: **PASS**.
+- One authoritative state/resource path preserved: **PASS**.
+- WW2 combat resolver decomposed into auditable stages: **PASS**.
+- Coefficients centralized and governed: **PASS**.
+- Capability → target → geometry → effectiveness → attrition → effects → outcome chain explicit: **PASS**.
+- Suppression/disorganization causal across turns: **PASS**.
+- Tactical outcomes produce canonical geographic consequences: **PASS**.
+- Reserve/command response represented deterministically: **PASS, bounded by current single-engagement model**.
+- Ammunition/fuel causal: **PASS**.
+- Historical calibration framework: **PASS; real historical dataset still deferred**.
+- Deterministic/sensitivity regression validation: **PASS**.
+- Maintainability CI gate: **PASS**.
+- Full validation CI: **GREEN** — 233 test files passed, 1 skipped; 1,786 tests passed, 5 skipped; type-check, maintainability and benchmark steps all successful.
+
+Wave 3 is therefore **implemented and CI-validated on `work/ww2-combat-overhaul`**, but the historical-fidelity score must not be represented as complete until real historical benchmark data is assembled and calibrated. Main integration is not authorized by this closure.
+
 ## Deferred findings / later hardening
 
 Findings discovered during audits that are not prerequisites for the active task must be recorded here and addressed later in dependency order. They must not be silently mixed into unrelated fixes.
 
-Known deferred areas include deeper sensor realism, broader combat-model fidelity, performance optimization, and any architectural cleanup not required by the active Phase-2 acceptance criteria.
+Known deferred areas include:
+
+- real historical WW2 benchmark dataset and coefficient calibration;
+- deeper weapon-level target interaction data;
+- full multi-unit reserve/counterattack/exploitation state machine;
+- richer sequential phase state machine and fire → suppression → assault causality;
+- more realistic terrain/LOS/target-exposure geometry using scenario-owned geographic data;
+- benchmark reporting cleanup for the current non-fatal `NaNx` comparison label;
+- broader project-wide maintainability checks beyond the WW2 combat modules;
+- deeper sensor realism and other combat-model fidelity improvements.
+
+These are later hardening/refinement tasks, not reasons to reopen the completed Phase-2 architecture.
 
 ## Execution discipline
 
