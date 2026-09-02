@@ -17,6 +17,7 @@
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix --cache",
     "format": "prettier --write --experimental-cli src/",
+    "check:maintainability": "node scripts/check-dwst-maintainability.mjs",
     "gen:milstd2525e": "node scripts/generate-milstd2525e.mjs",
     "diff:milstd": "node scripts/diff-milstd.mjs",
     "diff:milstd:html": "node scripts/diff-milstd-report.mjs",

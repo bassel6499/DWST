@@ -1,75 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { resolveWW2Combat } from './combat';
 import type { UnitState } from '../../core/types';
-
-const unit = (id: string, overrides: Partial<UnitState> = {}): UnitState => ({
-  id,
-  name: id,
-  side: 'allied',
-  echelon: 'division',
-  personnel: 10_000,
-  equipment: 500,
-  combatPower: 1,
-  readiness: 0.8,
-  logistics: 0.8,
-  fatigue: 0.1,
-  wear: 0.1,
-  training: 0.7,
-  experience: 0.7,
-  morale: 0.7,
-  cohesion: 0.7,
-  commandQuality: 0.7,
-  intelligence: 0.7,
-  ammunition: 0.8,
-  fuel: 0.8,
-  position: { lon: 35.5, lat: 33.9 },
-  status: 'operational',
-  cumulativeLosses: 0,
-  history: [],
-  ...overrides,
-});
-
-const input = (overrides: Record<string, unknown> = {}) => ({
-  attacker: unit('attacker'),
-  defender: unit('defender', { side: 'enemy' }),
-  terrainDefense: 1,
-  weather: 1,
-  surprise: 0,
-  artillerySupport: 0,
-  ...overrides,
-});
-
-describe('WW2 selectable combat ruleset', () => {
-  it('produces finite non-negative bounded losses', () => {
-    const result = resolveWW2Combat(input());
-    expect(result.attackerLosses).toBeGreaterThanOrEqual(0);
-    expect(result.defenderLosses).toBeGreaterThanOrEqual(0);
-    expect(result.attackerLosses).toBeLessThanOrEqual(10_000);
-    expect(result.defenderLosses).toBeLessThanOrEqual(10_000);
-    expect(Number.isFinite(result.attackerEffectiveness)).toBe(true);
-    expect(Number.isFinite(result.defenderEffectiveness)).toBe(true);
-  });
-
-  it('keeps supporting factors visible without replacing the governing law', () => {
-    const base = resolveWW2Combat(input());
-    const supported = resolveWW2Combat(input({ artillerySupport: 0.5, airSupport: 0.25 }));
-    expect(supported.defenderLosses).toBeGreaterThanOrEqual(base.defenderLosses);
-    expect(supported.factors.armor).toBe(0);
-    expect(supported.factors.air).toBe(0.25);
-  });
-
-  it('honors defender terrain advantage as a defender-side combat factor', () => {
-    const open = resolveWW2Combat(input({ terrainDefense: 0.5 }));
-    const defended = resolveWW2Combat(input({ terrainDefense: 1.5 }));
-    expect(defended.defenderEffectiveness).toBeGreaterThanOrEqual(open.defenderEffectiveness);
-  });
-
-  it('remains era-local and operates on canonical UnitState inputs', () => {
-    const result = resolveWW2Combat(input({
-      attacker: unit('attacker', { position: { lon: 179, lat: 10 } }),
-      defender: unit('defender', { side: 'enemy', position: { lon: -179, lat: 10 } }),
-    }));
-    expect(result.attackerLosses).toBeGreaterThanOrEqual(0);
-    expect(result.defenderLosses).toBeGreaterThanOrEqual(0);
-  });
+import type { CombatUnitContext } from '../../core/combatContext';
+const unit = (id:string,overrides:Partial<UnitState>={}):UnitState=>({id,name:id,side:'allied',echelon:'division',personnel:10_000,equipment:500,combatPower:1,readiness:0.8,logistics:0.8,fatigue:0.1,wear:0.1,training:0.7,experience:0.7,morale:0.7,cohesion:0.7,commandQuality:0.7,intelligence:0.7,ammunition:0.8,fuel:0.8,position:{lon:35.5,lat:33.9},status:'operational',cumulativeLosses:0,history:[],...overrides});
+const input=(overrides:Partial<Parameters<typeof resolveWW2Combat>[0]>={})=>({attacker:unit('attacker'),defender:unit('defender',{side:'enemy'}),terrainDefense:1,weather:1,surprise:0,...overrides});
+const armored=(ready=true):CombatUnitContext=>({equipmentOperational:100,equipmentDamaged:0,equipmentDestroyed:0,equipmentMissing:0,crewRequired:500,crewReady:ready?500:0,equipmentReady:ready?100:0,equipmentByType:{tank:100}});
+const antiArmor=(count=100):CombatUnitContext=>({equipmentOperational:count,equipmentDamaged:0,equipmentDestroyed:0,equipmentMissing:0,crewRequired:count,crewReady:count,equipmentReady:count,equipmentByType:{antiTank:count}});
+const artillery=(count=100):CombatUnitContext=>({equipmentOperational:count,equipmentDamaged:0,equipmentDestroyed:0,equipmentMissing:0,crewRequired:count,crewReady:count,equipmentReady:count,equipmentByType:{artillery:count}});
+const infantry=(count=100):CombatUnitContext=>({equipmentOperational:count,equipmentDamaged:0,equipmentDestroyed:0,equipmentMissing:0,crewRequired:0,crewReady:0,equipmentReady:count,equipmentByType:{infantry:count}});
+describe('WW2 combat overhaul',()=>{
+ it('produces finite bounded losses under normal conditions',()=>{const r=resolveWW2Combat(input());expect(r.attackerLosses).toBeGreaterThanOrEqual(0);expect(r.defenderLosses).toBeGreaterThanOrEqual(0);expect(r.attackerLosses).toBeLessThanOrEqual(10_000);expect(r.defenderLosses).toBeLessThanOrEqual(10_000);expect(Number.isFinite(r.attackerEffectiveness)).toBe(true);expect(Number.isFinite(r.defenderEffectiveness)).toBe(true);});
+ it('is deterministic and does not mutate units',()=>{const a=unit('attacker'),d=unit('defender',{side:'enemy'}),before=JSON.stringify({a,d});const first=resolveWW2Combat(input({attacker:a,defender:d,distanceKm:5})),second=resolveWW2Combat(input({attacker:a,defender:d,distanceKm:5}));expect(second).toEqual(first);expect(JSON.stringify({a,d})).toBe(before);});
+ it('preserves square-law behavior while applying combined-arms modifiers',()=>{const base=resolveWW2Combat(input()),supported=resolveWW2Combat(input({attackerContext:armored(),defenderContext:armored(),artillerySupport:0.4,airSupport:0.2,armorSupport:0.3,antiArmor:0.2}));expect(supported.defenderLosses).toBeGreaterThanOrEqual(base.defenderLosses);expect(supported.factors.artilleryA).toBe(0.4);expect(supported.factors.airA).toBe(0.2);expect(supported.factors.armorA).toBe(0.3);});
+ it('uses canonical equipment and crew readiness in combat capability',()=>{const ready=resolveWW2Combat(input({attackerContext:armored(true)})),unready=resolveWW2Combat(input({attackerContext:armored(false)}));expect(ready.attackerEffectiveness).toBeGreaterThan(unready.attackerEffectiveness);expect(ready.defenderLosses).toBeGreaterThanOrEqual(unready.defenderLosses);});
+ it('makes combined-arms effects target dependent',()=>{const tankVsInfantry=resolveWW2Combat(input({attackerContext:armored(),defenderContext:infantry()})),tankVsTank=resolveWW2Combat(input({attackerContext:armored(),defenderContext:armored()})),antiTankVsTank=resolveWW2Combat(input({attackerContext:antiArmor(),defenderContext:armored()})),antiTankVsInfantry=resolveWW2Combat(input({attackerContext:antiArmor(),defenderContext:infantry()}));expect(tankVsInfantry.defenderLosses).toBeGreaterThanOrEqual(0);expect(tankVsTank.defenderLosses).toBeGreaterThanOrEqual(0);expect(antiTankVsTank.defenderLosses).toBeGreaterThanOrEqual(antiTankVsInfantry.defenderLosses);});
+ it('uses range and force density instead of treating every engagement as identical',()=>{const close=resolveWW2Combat(input({distanceKm:2})),distant=resolveWW2Combat(input({distanceKm:15})),concentrated=resolveWW2Combat(input({attacker:unit('attacker',{frontageKm:1.5}),distanceKm:5}));expect(close.phase).toBe('assault');expect(distant.phase).toBe('positioning');expect(close.factors.rangeA).toBeGreaterThan(distant.factors.rangeA);expect(concentrated.factors.engagedA).toBeLessThanOrEqual(1);expect(concentrated.factors.densityA).toBeGreaterThan(close.factors.densityA);});
+ it('produces suppression and disorganization separately from permanent losses',()=>{const r=resolveWW2Combat(input({attackerContext:artillery(),defenderContext:artillery()}));expect(r.attackerSuppressionDelta).toBeGreaterThan(0);expect(r.defenderSuppressionDelta).toBeGreaterThan(0);expect(r.attackerDisorganizationDelta).toBeGreaterThan(0);expect(r.defenderDisorganizationDelta).toBeGreaterThan(0);});
+ it('generates explicit ammunition and fuel consumption',()=>{const r=resolveWW2Combat(input({attackerContext:armored(),defenderContext:armored()}));expect(r.attackerAmmunitionDelta).toBeLessThan(0);expect(r.defenderAmmunitionDelta).toBeLessThan(0);expect(r.attackerFuelDelta).toBeLessThan(0);expect(r.defenderFuelDelta).toBeLessThan(0);});
+ it('uses equipment-relative loss generation rather than a fixed personnel percentage',()=>{const light=resolveWW2Combat(input({attacker:unit('attacker',{equipment:20})})),heavy=resolveWW2Combat(input({attacker:unit('attacker',{equipment:1000})}));expect(light.attackerEquipmentLosses).toBeLessThanOrEqual(20);expect(heavy.attackerEquipmentLosses).toBeGreaterThanOrEqual(light.attackerEquipmentLosses);});
+ it('handles severe force asymmetry and near-zero forces without non-finite output',()=>{const r=resolveWW2Combat(input({attacker:unit('attacker',{personnel:25,equipment:1,ammunition:0.1,fuel:0.1}),defender:unit('defender',{side:'enemy',personnel:20_000,equipment:1000})}));for(const value of Object.values(r))if(typeof value==='number')expect(Number.isFinite(value)).toBe(true);expect(r.attackerLosses).toBeLessThanOrEqual(25);expect(r.defenderLosses).toBeLessThanOrEqual(20_000);});
+ it('applies terrain and surprise on the expected sides',()=>{const open=resolveWW2Combat(input({terrainDefense:0.55})),defended=resolveWW2Combat(input({terrainDefense:1.55})),surprised=resolveWW2Combat(input({surprise:0.5})),ambushed=resolveWW2Combat(input({surprise:-0.5}));expect(defended.defenderEffectiveness).toBeGreaterThanOrEqual(open.defenderEffectiveness);expect(surprised.defenderLosses).toBeGreaterThanOrEqual(ambushed.defenderLosses);});
+ it('keeps logistics, fatigue, wear, morale and command in the coefficient chain',()=>{const fresh=resolveWW2Combat(input({attacker:unit('attacker',{fatigue:0,wear:0,logistics:1,morale:1,commandQuality:1})})),degraded=resolveWW2Combat(input({attacker:unit('attacker',{fatigue:1,wear:1,logistics:0,morale:0,commandQuality:0})}));expect(fresh.attackerEffectiveness).toBeGreaterThan(degraded.attackerEffectiveness);});
+ it('returns a bounded tactical outcome and phase',()=>{const r=resolveWW2Combat(input({distanceKm:4,attacker:unit('attacker',{mobility:0.9}),defender:unit('defender',{side:'enemy',mobility:0.4})}));expect(['attacker_repulsed','attacker_stalls','local_gain','penetration','breakthrough','defender_withdraws']).toContain(r.outcome);expect(['approach','positioning','preparation','main_engagement','assault','exploitation']).toContain(r.phase);expect(r.factors.localRatio).toBeGreaterThan(0);});
+ it('returns no losses for an empty side',()=>{const r=resolveWW2Combat(input({attacker:unit('attacker',{personnel:0,equipment:0})}));expect(r.attackerLosses).toBe(0);expect(r.defenderLosses).toBe(0);expect(r.attackerAmmunitionDelta).toBe(0);expect(r.defenderAmmunitionDelta).toBe(0);});
+ it('exposes independently auditable stage outputs through the result boundary',()=>{const r=resolveWW2Combat(input({distanceKm:5,attackerContext:armored(),defenderContext:artillery()}));for(const key of ['attackerQuality','defenderQuality','rangeA','rangeB','frontA','frontB','densityA','densityB','artilleryA','artilleryB','attackerEquipment','defenderEquipment','attackerSuppression','defenderSuppression','attackerDisorganization','defenderDisorganization','localRatio','lossRateA','lossRateB'])expect(Number.isFinite(r.factors[key])).toBe(true);expect(r.factors.distanceKm).toBe(5);expect(r.factors.rangeA).toBeGreaterThan(0);expect(r.factors.alpha??1).toBeGreaterThan(0);});
 });

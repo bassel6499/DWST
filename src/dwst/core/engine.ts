@@ -1,3 +1,4 @@
+import type { CombatContextProvider } from './combatContext';
 import type { Order, ScenarioState, SimulationEvent, SimulationReport, UnitState, ResourceDelta } from './types';
 import { DEFAULT_ENGINE, getEraRuleset, type EngineCoefficients, type EraRuleset } from './eraRules';
 import { assessUnit } from './unitAssessment';
@@ -6,131 +7,20 @@ import { resolveEngagements } from './combat';
 import { applyCombatResult } from './combatState';
 import { unitEventsFromSimulationEvent } from './unitHistory';
 import { geographicDistanceMeters, interpolateGeographicPosition } from './geographicMovement';
-
-const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
-const byUnitId = (a: UnitState, b: UnitState) => a.id.localeCompare(b.id);
-
-/** Deterministic engine orchestration. Historical behavior belongs in rulesets. */
-export function effectiveReadiness(unit: UnitState, coefficients: EngineCoefficients = DEFAULT_ENGINE): number {
-  return clamp(unit.readiness *
-    (1 - coefficients.readinessLogisticsWeight + coefficients.readinessLogisticsWeight * unit.logistics) *
-    (1 - coefficients.readinessFatiguePenalty * unit.fatigue) *
-    (1 - coefficients.readinessWearPenalty * unit.wear));
+const clamp=(value:number,min=0,max=1)=>Math.min(max,Math.max(min,value));
+const byUnitId=(a:UnitState,b:UnitState)=>a.id.localeCompare(b.id);
+export function effectiveReadiness(unit:UnitState,coefficients:EngineCoefficients=DEFAULT_ENGINE):number{return clamp(unit.readiness*(1-coefficients.readinessLogisticsWeight+coefficients.readinessLogisticsWeight*unit.logistics)*(1-coefficients.readinessFatiguePenalty*unit.fatigue)*(1-coefficients.readinessWearPenalty*unit.wear));}
+export function effectiveCombatPower(unit:UnitState,coefficients:EngineCoefficients=DEFAULT_ENGINE):number{return Math.max(0,unit.combatPower*effectiveReadiness(unit,coefficients)*(1-coefficients.trainingEffect+coefficients.trainingEffect*unit.training)*(1-coefficients.experienceEffect+coefficients.experienceEffect*unit.experience)*(1-coefficients.cohesionEffect+coefficients.cohesionEffect*unit.cohesion)*(1-coefficients.moraleEffect+coefficients.moraleEffect*unit.morale)*(1-coefficients.commandEffect+coefficients.commandEffect*unit.commandQuality));}
+export function applyOrder(unit:UnitState,order:Order):UnitState{return{...unit,order,reserveState:order.type==='reserve'?'reserve':order.type==='attack'&&unit.reserveState==='reserve'?'alert':unit.reserveState};}
+interface MovementResolution{event?:SimulationEvent;fuelDelta:number;}
+function resolveMovement(unit:UnitState,hours:number,rules:EngineCoefficients):MovementResolution{if(!unit.order?.destination||unit.status==='destroyed'||unit.status==='withdrawn')return{fuelDelta:0};const distanceFactor=Math.min(1,hours/rules.movementHours),readiness=effectiveReadiness(unit,rules),defaultMobility=0.45+0.25*readiness+0.20*unit.commandQuality+0.10*(unit.equipment>0?1:0),mobility=clamp(unit.mobility??defaultMobility),completion=distanceFactor*(1-rules.movementReadinessWeight+rules.movementReadinessWeight*readiness)*(1-rules.movementCommandWeight+rules.movementCommandWeight*unit.commandQuality)*(0.75+0.25*mobility),distance=geographicDistanceMeters(unit.position,unit.order.destination);if(distance<1e-6)return{fuelDelta:0};const ratio=Math.min(1,completion);unit.position=interpolateGeographicPosition(unit.position,unit.order.destination,ratio);unit.fatigue=clamp(unit.fatigue+rules.movementFatigue*distanceFactor);unit.wear=clamp(unit.wear+rules.movementWear*distanceFactor);const fuelConsumed=Math.min(unit.fuel,rules.movementFuel*distanceFactor*(0.85+0.15*mobility));unit.fuel-=fuelConsumed;return{fuelDelta:-fuelConsumed,event:{turn:0,phase:'movement',message:`${unit.name} executed its movement order at ${(completion*100).toFixed(0)}% expected efficiency.`,unitIds:[unit.id]}};}
+const emptyResourceDelta=(unitId:string):ResourceDelta=>({unitId,personnel:0,equipment:0,ammunition:0,fuel:0});
+const mergeResourceDelta=(a:ResourceDelta,b:ResourceDelta):ResourceDelta=>({unitId:a.unitId,personnel:a.personnel+b.personnel,equipment:a.equipment+b.equipment,ammunition:a.ammunition+b.ammunition,fuel:a.fuel+b.fuel});
+export function resolveTurn(state:ScenarioState,rules:EraRuleset=getEraRuleset(state.era),baseline?:SimulationBaseline,combatContextProvider?:CombatContextProvider):SimulationReport{
+ if(!rules)throw new Error('No ruleset selected');const events:SimulationEvent[]=[],deltas=new Map<string,ResourceDelta>();const recordDelta=(delta:ResourceDelta)=>deltas.set(delta.unitId,mergeResourceDelta(deltas.get(delta.unitId)??emptyResourceDelta(delta.unitId),delta));const hours=state.turnHours,turn=Math.floor(state.elapsedHours/Math.max(hours,1))+1;
+ const units=Object.values(state.units).sort(byUnitId).map((unit)=>{const next={...unit,position:{...unit.position},history:[...unit.history]};if(next.order?.type==='reserve')next.reserveState='reserve';if(next.order?.type==='attack'&&next.reserveState==='reserve')next.reserveState='alert';const movement=resolveMovement(next,hours,rules.engine);if(movement.event){const event={...movement.event,turn};events.push(event);for(const entry of unitEventsFromSimulationEvent(event))next.history.push(entry.event);}recordDelta({unitId:next.id,personnel:0,equipment:0,ammunition:0,fuel:movement.fuelDelta});const scale=hours/rules.engine.movementHours;next.fatigue=clamp(next.fatigue+rules.engine.turnFatigue*scale);if(rules.logisticsEnabled)next.logistics=clamp(next.logistics-rules.engine.logisticsDrain*scale);next.readiness=clamp(next.readiness-rules.engine.readinessDrain*scale);const suppressionRecovery=clamp(0.35+0.20*next.commandQuality+0.10*next.cohesion);const disorganizationRecovery=clamp(0.015+0.025*next.commandQuality+0.020*next.cohesion);next.suppression=clamp((next.suppression??0)*(1-suppressionRecovery*scale));next.disorganization=clamp((next.disorganization??0)-disorganizationRecovery*scale);if(next.disorganization<0.30&&next.status==='disorganized')next.status='operational';next.combatPower=effectiveCombatPower(next,rules.engine);if(baseline)next.status=assessUnit(next,baseline,rules.unitAssessment).status;return next;});
+ const resolvedState:ScenarioState={...state,units:Object.fromEntries(units.map((unit)=>[unit.id,unit]))};const engagements=rules.resolveCombat?resolveEngagements(resolvedState,combatContextProvider):[];
+ for(const engagement of engagements){const attacker=resolvedState.units[engagement.attackerId],defender=resolvedState.units[engagement.defenderId];if(!attacker||!defender)continue;const applied=applyCombatResult(attacker,defender,engagement);resolvedState.units[attacker.id]=applied.attacker;resolvedState.units[defender.id]=applied.defender;for(const delta of applied.resourceDeltas)recordDelta(delta);const event:SimulationEvent={turn,phase:'combat',message:engagement.result,unitIds:[attacker.id,defender.id]};events.push(event);const lossesByUnit={[attacker.id]:{personnelLosses:-applied.resourceDeltas[0].personnel,equipmentLosses:-applied.resourceDeltas[0].equipment},[defender.id]:{personnelLosses:-applied.resourceDeltas[1].personnel,equipmentLosses:-applied.resourceDeltas[1].equipment}};for(const entry of unitEventsFromSimulationEvent(event,lossesByUnit))resolvedState.units[entry.unitId].history.push(entry.event);}
+ return{turn,elapsedHours:state.elapsedHours+hours,events,units:Object.values(resolvedState.units).sort(byUnitId),resourceDeltas:[...deltas.values()].sort((a,b)=>a.unitId.localeCompare(b.unitId))};
 }
-
-export function effectiveCombatPower(unit: UnitState, coefficients: EngineCoefficients = DEFAULT_ENGINE): number {
-  return Math.max(0, unit.combatPower * effectiveReadiness(unit, coefficients) *
-    (1 - coefficients.trainingEffect + coefficients.trainingEffect * unit.training) *
-    (1 - coefficients.experienceEffect + coefficients.experienceEffect * unit.experience) *
-    (1 - coefficients.cohesionEffect + coefficients.cohesionEffect * unit.cohesion) *
-    (1 - coefficients.moraleEffect + coefficients.moraleEffect * unit.morale) *
-    (1 - coefficients.commandEffect + coefficients.commandEffect * unit.commandQuality));
-}
-
-export function applyOrder(unit: UnitState, order: Order): UnitState { return { ...unit, order }; }
-
-interface MovementResolution {
-  event?: SimulationEvent;
-  fuelDelta: number;
-}
-
-function resolveMovement(unit: UnitState, hours: number, rules: EngineCoefficients): MovementResolution {
-  if (!unit.order?.destination || unit.status === 'destroyed') return { fuelDelta: 0 };
-  const distanceFactor = Math.min(1, hours / rules.movementHours);
-  const readiness = effectiveReadiness(unit, rules);
-  const completion = distanceFactor * (1 - rules.movementReadinessWeight + rules.movementReadinessWeight * readiness) * (1 - rules.movementCommandWeight + rules.movementCommandWeight * unit.commandQuality);
-  const distance = geographicDistanceMeters(unit.position, unit.order.destination);
-  if (distance < 1e-6) return { fuelDelta: 0 };
-  const ratio = Math.min(1, completion);
-  unit.position = interpolateGeographicPosition(unit.position, unit.order.destination, ratio);
-  unit.fatigue = clamp(unit.fatigue + rules.movementFatigue * distanceFactor);
-  unit.wear = clamp(unit.wear + rules.movementWear * distanceFactor);
-  const fuelConsumed = Math.min(unit.fuel, rules.movementFuel * distanceFactor);
-  unit.fuel -= fuelConsumed;
-  return {
-    fuelDelta: -fuelConsumed,
-    event: { turn: 0, phase: 'movement', message: `${unit.name} executed its movement order at ${(completion * 100).toFixed(0)}% expected efficiency.`, unitIds: [unit.id] },
-  };
-}
-
-const emptyResourceDelta = (unitId: string): ResourceDelta => ({ unitId, personnel: 0, equipment: 0, ammunition: 0, fuel: 0 });
-
-const mergeResourceDelta = (a: ResourceDelta, b: ResourceDelta): ResourceDelta => ({
-  unitId: a.unitId,
-  personnel: a.personnel + b.personnel,
-  equipment: a.equipment + b.equipment,
-  ammunition: a.ammunition + b.ammunition,
-  fuel: a.fuel + b.fuel,
-});
-
-/** Pure turn resolution. The supplied ScenarioState is never mutated. */
-export function resolveTurn(state: ScenarioState, rules: EraRuleset = getEraRuleset(state.era), baseline?: SimulationBaseline): SimulationReport {
-  if (!rules) throw new Error('No ruleset selected');
-  const events: SimulationEvent[] = [];
-  const deltas = new Map<string, ResourceDelta>();
-  const recordDelta = (delta: ResourceDelta) => {
-    deltas.set(delta.unitId, mergeResourceDelta(deltas.get(delta.unitId) ?? emptyResourceDelta(delta.unitId), delta));
-  };
-  const hours = state.turnHours;
-  const turn = Math.floor(state.elapsedHours / Math.max(hours, 1)) + 1;
-  const units = Object.values(state.units).sort(byUnitId).map((unit) => {
-    const next = { ...unit, position: { ...unit.position }, history: [...unit.history] };
-    const movement = resolveMovement(next, hours, rules.engine);
-    if (movement.event) {
-      const event = { ...movement.event, turn };
-      events.push(event);
-      const historyEntries = unitEventsFromSimulationEvent(event);
-      for (const entry of historyEntries) next.history.push(entry.event);
-    }
-    recordDelta({ unitId: next.id, personnel: 0, equipment: 0, ammunition: 0, fuel: movement.fuelDelta });
-    const scale = hours / rules.engine.movementHours;
-    next.fatigue = clamp(next.fatigue + rules.engine.turnFatigue * scale);
-    if (rules.logisticsEnabled) next.logistics = clamp(next.logistics - rules.engine.logisticsDrain * scale);
-    next.readiness = clamp(next.readiness - rules.engine.readinessDrain * scale);
-    next.combatPower = effectiveCombatPower(next, rules.engine);
-    if (baseline) next.status = assessUnit(next, baseline, rules.unitAssessment).status;
-    return next;
-  });
-
-  const resolvedState: ScenarioState = { ...state, units: Object.fromEntries(units.map((unit) => [unit.id, unit])) };
-  const engagements = rules.resolveCombat ? resolveEngagements(resolvedState) : [];
-
-  for (const engagement of engagements) {
-    const attacker = resolvedState.units[engagement.attackerId];
-    const defender = resolvedState.units[engagement.defenderId];
-    if (!attacker || !defender) continue;
-
-    const applied = applyCombatResult(attacker, defender, engagement);
-    resolvedState.units[attacker.id] = applied.attacker;
-    resolvedState.units[defender.id] = applied.defender;
-    for (const delta of applied.resourceDeltas) recordDelta(delta);
-    const event: SimulationEvent = { turn, phase: 'combat', message: engagement.result, unitIds: [attacker.id, defender.id] };
-    events.push(event);
-
-    const lossesByUnit = {
-      [attacker.id]: { personnelLosses: -applied.resourceDeltas[0].personnel, equipmentLosses: -applied.resourceDeltas[0].equipment },
-      [defender.id]: { personnelLosses: -applied.resourceDeltas[1].personnel, equipmentLosses: -applied.resourceDeltas[1].equipment },
-    };
-    for (const entry of unitEventsFromSimulationEvent(event, lossesByUnit)) {
-      resolvedState.units[entry.unitId].history.push(entry.event);
-    }
-  }
-
-  return {
-    turn,
-    elapsedHours: state.elapsedHours + hours,
-    events,
-    units: Object.values(resolvedState.units).sort(byUnitId),
-    resourceDeltas: [...deltas.values()].sort((a, b) => a.unitId.localeCompare(b.unitId)),
-  };
-}
-
-/** Explicit state application for callers that want to advance a live scenario. */
-export function applyTurn(state: ScenarioState, report: SimulationReport): ScenarioState {
-  return {
-    ...state,
-    elapsedHours: report.elapsedHours,
-    units: Object.fromEntries(report.units.map((unit) => [unit.id, unit])),
-    events: [...state.events, ...report.events],
-  };
-}
+export function applyTurn(state:ScenarioState,report:SimulationReport):ScenarioState{return{...state,elapsedHours:report.elapsedHours,units:Object.fromEntries(report.units.map((unit)=>[unit.id,unit])),events:[...state.events,...report.events]};}
