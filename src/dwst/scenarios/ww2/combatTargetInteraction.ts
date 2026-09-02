@@ -1,27 +1,18 @@
 import type { WW2ForceCapability } from './combatCapability';
-import type { WW2CombatInput } from './combat';
+import type { WW2CombatInput } from './combatTypes';
 
 const clamp = (v: number, min = 0, max = 1) => Math.max(min, Math.min(max, v));
 const positive = (v: number) => Math.max(0, Number.isFinite(v) ? v : 0);
 
 export interface WW2TargetInteraction {
-  readonly artilleryTargetA: number;
-  readonly artilleryTargetB: number;
-  readonly armorTargetA: number;
-  readonly armorTargetB: number;
-  readonly targetArmorA: number;
-  readonly targetArmorB: number;
-  readonly infantryTargetA: number;
-  readonly infantryTargetB: number;
-  readonly directFireA: number;
-  readonly directFireB: number;
+  readonly artilleryTargetA: number; readonly artilleryTargetB: number;
+  readonly armorTargetA: number; readonly armorTargetB: number;
+  readonly targetArmorA: number; readonly targetArmorB: number;
+  readonly infantryTargetA: number; readonly infantryTargetB: number;
+  readonly directFireA: number; readonly directFireB: number;
 }
 
-/**
- * Target interaction remains deliberately category-level until scenario data
- * supplies weapon-level definitions. This prevents a fake database of WW2
- * weapon coefficients while making target dependence explicit.
- */
+/** Category-level interaction until scenario data supplies weapon-level definitions. */
 export function calculateTargetInteraction(
   input: WW2CombatInput,
   attacker: WW2ForceCapability,
@@ -33,8 +24,6 @@ export function calculateTargetInteraction(
   const antiArmorB = defender.antiArmor * 0.80;
   const armorA = positive(input.armorSupport ?? attacker.armor * 0.60);
   const armorB = defender.armor * 0.60;
-  const artilleryA = attacker.artillery * 0.75;
-  const artilleryB = defender.artillery * 0.75;
   const defenderArmor = clamp(defender.armor);
   const attackerArmor = clamp(attacker.armor);
   const defenderInfantry = clamp(defender.infantry);
