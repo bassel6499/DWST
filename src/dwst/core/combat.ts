@@ -5,12 +5,13 @@ import { detectContacts } from './detection';
 
 const clamp=(v:number,min=0,max=1)=>Math.max(min,Math.min(max,v));
 export interface Engagement {
- attackerId:string; defenderId:string; distanceKm:number; detectedByAttacker:boolean;
- attackerLosses:number; defenderLosses:number; attackerEquipmentLosses:number; defenderEquipmentLosses:number;
- attackerAmmunitionDelta:number; defenderAmmunitionDelta:number; attackerFuelDelta:number; defenderFuelDelta:number;
- attackerReadinessDelta:number; defenderReadinessDelta:number; attackerMoraleDelta:number; defenderMoraleDelta:number;
- attackerSuppressionDelta:number; defenderSuppressionDelta:number; attackerDisorganizationDelta:number; defenderDisorganizationDelta:number;
- phase:string; outcome:string; result:string;
+  attackerId:string; defenderId:string; distanceKm:number; detectedByAttacker:boolean;
+  attackerLosses:number; defenderLosses:number; attackerEquipmentLosses:number; defenderEquipmentLosses:number;
+  attackerAmmunitionDelta:number; defenderAmmunitionDelta:number; attackerFuelDelta:number; defenderFuelDelta:number;
+  attackerReadinessDelta:number; defenderReadinessDelta:number; attackerMoraleDelta:number; defenderMoraleDelta:number;
+  attackerSuppressionDelta:number; defenderSuppressionDelta:number; attackerDisorganizationDelta:number; defenderDisorganizationDelta:number;
+  attackerAdvanceKm:number; defenderWithdrawalKm:number; defenderReserveCommitted:boolean; attackerReserveCommitted:boolean;
+  phase:string; outcome:string; result:string;
 }
 /** Resolve engagements through the single era-owned combat ruleset. */
 export function resolveEngagements(state:ScenarioState,contextProvider?:CombatContextProvider):Engagement[]{
@@ -22,7 +23,16 @@ export function resolveEngagements(state:ScenarioState,contextProvider?:CombatCo
   const key=[attacker.id,defender.id].sort().join(':'); if(seen.has(key))continue; seen.add(key);
   const attackerContext=contextProvider?.(attacker.id)?.attacker,defenderContext=contextProvider?.(defender.id)?.defender;
   const result=era.resolveCombat({attacker,defender,state,distanceKm:c.distanceKm,surprise:clamp(attacker.intelligence-defender.intelligence,-0.5,0.5),context:{attacker:attackerContext,defender:defenderContext}});
-  engagements.push({attackerId:attacker.id,defenderId:defender.id,distanceKm:c.distanceKm,detectedByAttacker:true,attackerLosses:result.attackerLosses,defenderLosses:result.defenderLosses,attackerEquipmentLosses:result.attackerEquipmentLosses,defenderEquipmentLosses:result.defenderEquipmentLosses,attackerAmmunitionDelta:result.attackerAmmunitionDelta,defenderAmmunitionDelta:result.defenderAmmunitionDelta,attackerFuelDelta:result.attackerFuelDelta,defenderFuelDelta:result.defenderFuelDelta,attackerReadinessDelta:result.attackerReadinessDelta,defenderReadinessDelta:result.defenderReadinessDelta,attackerMoraleDelta:result.attackerMoraleDelta,defenderMoraleDelta:result.defenderMoraleDelta,attackerSuppressionDelta:result.attackerSuppressionDelta,defenderSuppressionDelta:result.defenderSuppressionDelta,attackerDisorganizationDelta:result.attackerDisorganizationDelta,defenderDisorganizationDelta:result.defenderDisorganizationDelta,phase:result.phase,outcome:result.outcome,result:`${result.outcome} (${result.phase}): ${attacker.name} -${result.attackerLosses} personnel/-${result.attackerEquipmentLosses} equipment; ${defender.name} -${result.defenderLosses} personnel/-${result.defenderEquipmentLosses} equipment.`});
+  engagements.push({
+   attackerId:attacker.id,defenderId:defender.id,distanceKm:c.distanceKm,detectedByAttacker:true,
+   attackerLosses:result.attackerLosses,defenderLosses:result.defenderLosses,attackerEquipmentLosses:result.attackerEquipmentLosses,defenderEquipmentLosses:result.defenderEquipmentLosses,
+   attackerAmmunitionDelta:result.attackerAmmunitionDelta,defenderAmmunitionDelta:result.defenderAmmunitionDelta,attackerFuelDelta:result.attackerFuelDelta,defenderFuelDelta:result.defenderFuelDelta,
+   attackerReadinessDelta:result.attackerReadinessDelta,defenderReadinessDelta:result.defenderReadinessDelta,attackerMoraleDelta:result.attackerMoraleDelta,defenderMoraleDelta:result.defenderMoraleDelta,
+   attackerSuppressionDelta:result.attackerSuppressionDelta,defenderSuppressionDelta:result.defenderSuppressionDelta,attackerDisorganizationDelta:result.attackerDisorganizationDelta,defenderDisorganizationDelta:result.defenderDisorganizationDelta,
+   attackerAdvanceKm:result.attackerAdvanceKm??0,defenderWithdrawalKm:result.defenderWithdrawalKm??0,defenderReserveCommitted:result.defenderReserveCommitted??false,attackerReserveCommitted:result.attackerReserveCommitted??false,
+   phase:result.phase,outcome:result.outcome,
+   result:`${result.outcome} (${result.phase}): ${attacker.name} -${result.attackerLosses} personnel/-${result.attackerEquipmentLosses} equipment; ${defender.name} -${result.defenderLosses} personnel/-${result.defenderEquipmentLosses} equipment.`
+  });
  }
  return engagements;
 }
