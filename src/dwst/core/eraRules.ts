@@ -1,15 +1,38 @@
 import type { EraId, ScenarioState, UnitState } from './types';
 import type { CombatContext } from './combatContext';
-import type { WW2TerrainType } from '../scenarios/ww2/combatGeometry';
+import type { WW2TerrainType } from '../scenarios/ww2/combatTypes';
 import { resolveWW2Combat } from '../scenarios/ww2/combat';
-export type CombatLaw='linear'|'mixed'|'new-square'|'square'|'contemporary-hybrid'|'extended-square';
-export interface EngineCoefficients{readonly movementHours:number;readonly movementReadinessWeight:number;readonly movementCommandWeight:number;readonly movementFatigue:number;readonly movementWear:number;readonly movementFuel:number;readonly turnFatigue:number;readonly logisticsDrain:number;readonly readinessDrain:number;readonly readinessLogisticsWeight:number;readonly readinessFatiguePenalty:number;readonly readinessWearPenalty:number;readonly trainingEffect:number;readonly experienceEffect:number;readonly cohesionEffect:number;readonly moraleEffect:number;readonly commandEffect:number;}
-export interface UnitAssessmentPolicy{readonly destroyedPersonnel:number;readonly disorganizedPersonnel:number;readonly disorganizedCondition:number;}
-export type DetectionSensorType='visual'|'recon'|'airRecon'|'signals';
-export interface DetectionPolicy{readonly baseUnaidedRangeKm:number;readonly sensorRangeModifiers:Readonly<Record<DetectionSensorType,number>>;readonly intelligenceFloor:number;readonly intelligenceWeight:number;readonly readinessFloor:number;readonly readinessWeight:number;readonly weatherFloor:number;readonly weatherWeight:number;readonly terrainFloor:number;readonly terrainWeight:number;readonly formationConfidenceThreshold:number;readonly unitConfidenceThreshold:number;}
-export interface CombatResult{attackerLosses:number;defenderLosses:number;attackerEquipmentLosses:number;defenderEquipmentLosses:number;attackerAmmunitionDelta:number;defenderAmmunitionDelta:number;attackerFuelDelta:number;defenderFuelDelta:number;attackerReadinessDelta:number;defenderReadinessDelta:number;attackerMoraleDelta:number;defenderMoraleDelta:number;attackerSuppressionDelta:number;defenderSuppressionDelta:number;attackerDisorganizationDelta:number;defenderDisorganizationDelta:number;attackerAdvanceKm?:number;defenderWithdrawalKm?:number;defenderReserveCommitted?:boolean;attackerReserveCommitted?:boolean;outcome:string;phase:string;}
-export type CombatResolver=(input:{attacker:UnitState;defender:UnitState;state:ScenarioState;surprise:number;distanceKm?:number;context?:CombatContext;})=>CombatResult;
-export interface EraRuleset{readonly id:EraId;readonly label:string;readonly implemented:boolean;readonly combatLaw:CombatLaw;readonly rangedFire:boolean;readonly spatialModel:'none'|'pde'|'pde-hybrid';readonly defaultTurnHours:number;readonly equipmentCrewCoupling:boolean;readonly permanentAttrition:boolean;readonly logisticsEnabled:boolean;readonly engine:EngineCoefficients;readonly unitAssessment:UnitAssessmentPolicy;readonly detection:DetectionPolicy;readonly resolveCombat?:CombatResolver;readonly notes:readonly string[];}
+
+export type CombatLaw = 'linear' | 'mixed' | 'new-square' | 'square' | 'contemporary-hybrid' | 'extended-square';
+export interface EngineCoefficients {
+  readonly movementHours:number; readonly movementReadinessWeight:number; readonly movementCommandWeight:number; readonly movementFatigue:number;
+  readonly movementWear:number; readonly movementFuel:number; readonly turnFatigue:number; readonly logisticsDrain:number; readonly readinessDrain:number;
+  readonly readinessLogisticsWeight:number; readonly readinessFatiguePenalty:number; readonly readinessWearPenalty:number; readonly trainingEffect:number;
+  readonly experienceEffect:number; readonly cohesionEffect:number; readonly moraleEffect:number; readonly commandEffect:number;
+}
+export interface UnitAssessmentPolicy { readonly destroyedPersonnel:number; readonly disorganizedPersonnel:number; readonly disorganizedCondition:number; }
+export type DetectionSensorType = 'visual'|'recon'|'airRecon'|'signals';
+export interface DetectionPolicy {
+  readonly baseUnaidedRangeKm:number; readonly sensorRangeModifiers:Readonly<Record<DetectionSensorType,number>>;
+  readonly intelligenceFloor:number; readonly intelligenceWeight:number; readonly readinessFloor:number; readonly readinessWeight:number;
+  readonly weatherFloor:number; readonly weatherWeight:number; readonly terrainFloor:number; readonly terrainWeight:number;
+  readonly formationConfidenceThreshold:number; readonly unitConfidenceThreshold:number;
+}
+export interface CombatResult {
+  attackerLosses:number; defenderLosses:number; attackerEquipmentLosses:number; defenderEquipmentLosses:number;
+  attackerAmmunitionDelta:number; defenderAmmunitionDelta:number; attackerFuelDelta:number; defenderFuelDelta:number;
+  attackerReadinessDelta:number; defenderReadinessDelta:number; attackerMoraleDelta:number; defenderMoraleDelta:number;
+  attackerSuppressionDelta:number; defenderSuppressionDelta:number; attackerDisorganizationDelta:number; defenderDisorganizationDelta:number;
+  attackerAdvanceKm?:number; defenderWithdrawalKm?:number; defenderReserveCommitted?:boolean; attackerReserveCommitted?:boolean;
+  outcome:string; phase:string;
+}
+export type CombatResolver = (input:{attacker:UnitState;defender:UnitState;state:ScenarioState;surprise:number;distanceKm?:number;context?:CombatContext;})=>CombatResult;
+export interface EraRuleset {
+  readonly id:EraId; readonly label:string; readonly implemented:boolean; readonly combatLaw:CombatLaw; readonly rangedFire:boolean;
+  readonly spatialModel:'none'|'pde'|'pde-hybrid'; readonly defaultTurnHours:number; readonly equipmentCrewCoupling:boolean;
+  readonly permanentAttrition:boolean; readonly logisticsEnabled:boolean; readonly engine:EngineCoefficients; readonly unitAssessment:UnitAssessmentPolicy;
+  readonly detection:DetectionPolicy; readonly resolveCombat?:CombatResolver; readonly notes:readonly string[];
+}
 function deepFreeze<T extends object>(value:T):Readonly<T>{for(const key of Reflect.ownKeys(value)){const child=value[key as keyof T];if(child!==null&&typeof child==='object'&&!Object.isFrozen(child))deepFreeze(child as object);}return Object.freeze(value);}
 export const DEFAULT_ENGINE:Readonly<EngineCoefficients>=deepFreeze({movementHours:6,movementReadinessWeight:0.65,movementCommandWeight:0.3,movementFatigue:0.04,movementWear:0.02,movementFuel:0.04,turnFatigue:0.01,logisticsDrain:0.015,readinessDrain:0.005,readinessLogisticsWeight:0.4,readinessFatiguePenalty:0.35,readinessWearPenalty:0.25,trainingEffect:0.25,experienceEffect:0.25,cohesionEffect:0.25,moraleEffect:0.25,commandEffect:0.2});
 export const DEFAULT_DETECTION_POLICY:Readonly<DetectionPolicy>=deepFreeze({baseUnaidedRangeKm:12,sensorRangeModifiers:{visual:1,recon:1.25,airRecon:1.7,signals:1.1},intelligenceFloor:0.65,intelligenceWeight:0.35,readinessFloor:0.7,readinessWeight:0.3,weatherFloor:0.65,weatherWeight:0.35,terrainFloor:0.75,terrainWeight:0.25,formationConfidenceThreshold:0.85,unitConfidenceThreshold:0.55});
