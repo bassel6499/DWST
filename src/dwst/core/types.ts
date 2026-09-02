@@ -24,6 +24,8 @@ export interface UnitState {
   readiness:number; training:number; experience:number; morale:number; cohesion:number;
   fatigue:number; wear:number; logistics:number; commandQuality:number; intelligence:number;
   combatPower:number; status:UnitStatus; position:WorldPosition; order?:Order;
+  /** Optional generic spatial/condition inputs. Era rules may supply calibrated defaults. */
+  frontageKm?:number; mobility?:number; reserveFraction?:number; suppression?:number; disorganization?:number;
   cumulativeLosses:number; history:UnitEvent[];
 }
 export interface Order { type:'move'|'attack'|'defend'|'screen'|'reserve'|'withdraw'|'recon'; objective?:string; destination?:WorldPosition; priority?:'low'|'normal'|'high'; posture?:'cautious'|'normal'|'aggressive'; text?:string; }
