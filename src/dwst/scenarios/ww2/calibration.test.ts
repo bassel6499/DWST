@@ -11,7 +11,7 @@ describe('WW2 calibration harness',()=>{
   const cases=[
    {id:'quality',baseline:base(),variant:{...base(),attacker:unit('a',{training:1,experience:1,morale:1,cohesion:1,readiness:1})},assertions:[(b:any,v:any)=>v.attackerEffectiveness>b.attackerEffectiveness]},
    {id:'range',baseline:{...base(),distanceKm:15},variant:{...base(),distanceKm:2},assertions:[(b:any,v:any)=>v.factors.rangeA>b.factors.rangeA]},
-   {id:'suppression',baseline:base(),variant:{...base(),attacker:unit('a',{artillery:0})},assertions:[(b:any,v:any)=>b.defenderSuppressionDelta>=0&&v.defenderSuppressionDelta>=0]},
+   {id:'condition',baseline:{...base(),attacker:unit('a',{fatigue:1,wear:1,logistics:0,morale:0})},variant:{...base(),attacker:unit('a',{fatigue:0,wear:0,logistics:1,morale:1})},assertions:[(b:any,v:any)=>v.attackerEffectiveness>b.attackerEffectiveness]},
    {id:'determinism',baseline:base(),variant:base(),assertions:[(b:any,v:any)=>JSON.stringify(b)===JSON.stringify(v)]},
   ];
   expect(evaluateWW2Calibration(cases).every((result)=>result.passed)).toBe(true);
